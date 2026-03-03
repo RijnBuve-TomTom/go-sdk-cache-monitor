@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cache Monitor</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header id="header">
+    <div class="header-left">
+      <h1>🗺️ Cache Monitor</h1>
+      <span id="connection-badge" class="badge badge-disconnected">Disconnected</span>
+      <span id="device-id" class="device-id"></span>
+    </div>
+    <div class="header-right">
+      <span id="msg-counter" class="counter">0 msgs</span>
+      <span id="events-per-sec" class="counter">0 evt/s</span>
+    </div>
+  </header>
+
+  <!-- ── Main grid ──────────────────────────────────────────────────────── -->
+  <main id="main">
+    <!-- Left: Tile event feed -->
+    <section id="tile-feed" class="panel">
+      <h2>Live Tile Events</h2>
+      <div id="tile-feed-list" class="feed-list"></div>
+    </section>
+
+    <!-- Center: Charts -->
+    <section id="charts" class="panel">
+      <h2>Event Rate <small>(last 60s)</small></h2>
+      <canvas id="rate-chart" height="200"></canvas>
+      <h2>Hit Ratio <small>(per cache)</small></h2>
+      <canvas id="hit-ratio-chart" height="200"></canvas>
+    </section>
+
+    <!-- Right: Cache stats -->
+    <section id="cache-stats" class="panel">
+      <h2>Cache Statistics</h2>
+      <div id="cache-stats-container"></div>
+    </section>
+  </main>
+
+  <!-- ── Floating event log ─────────────────────────────────────────────── -->
+  <div id="floating-stats" class="floating-window">
+    <div class="floating-header" id="floating-header">
+      <span>📊 Detailed Stats</span>
+      <button id="floating-toggle" class="floating-btn">_</button>
+    </div>
+    <div id="floating-body" class="floating-body">
+      <div id="floating-content"></div>
+    </div>
+  </div>
+
+  <!-- ── Alert toast for cache events ───────────────────────────────────── -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
