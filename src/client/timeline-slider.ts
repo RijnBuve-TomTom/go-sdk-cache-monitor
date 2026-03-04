@@ -41,6 +41,9 @@ export class TimelineSlider {
 
   /** Update the thumb position and labels from the cursor state. */
   updatePosition(): void {
+    // If no events yet, keep the thumb at the right edge
+    if (this.timeRangeMs <= 0) return;
+
     const isLive = this.cursor.isLive();
     const cursorTime = isLive ? this.latestNow : this.cursor.getTime();
     const rangeStart = this.latestNow - this.timeRangeMs;
@@ -63,9 +66,12 @@ export class TimelineSlider {
     // Update label
     if (isLive) {
       this.els.labelCursor.textContent = "● LIVE";
+      this.els.thumb.title = "Live — drag to travel in time";
     } else {
       const deltaS = ((cursorTime - this.latestNow) / 1000).toFixed(0);
       this.els.labelCursor.textContent = `${deltaS}s`;
+      const date = new Date(cursorTime);
+      this.els.thumb.title = date.toLocaleTimeString("en-US", { hour12: false });
     }
   }
 

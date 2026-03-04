@@ -47,6 +47,7 @@ const $timelineTrack = document.getElementById("timeline-slider")!.querySelector
 const $timelineThumb = document.getElementById("timeline-thumb")!;
 const $timelineElapsed = document.getElementById("timeline-elapsed")!;
 const $timelineLabelCursor = document.getElementById("timeline-label-cursor")!;
+const $goLiveBtn = document.getElementById("timeline-go-live")!;
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ const eventStore = new EventStore();
 const EVENT_STORE_MAX_AGE_MS = 120_000; // keep 2 minutes of history
 
 const timeCursor = new TimeCursor((state) => {
+  $goLiveBtn.classList.toggle("hidden", state.isLive);
   if (state.isLive) {
     // Resume live: replay all events to rebuild current map state
     rebuildMapFromStore(Infinity);
@@ -777,6 +779,13 @@ $menuClearKey.addEventListener("click", () => {
   clearApiKey();
   $menuDropdown.classList.add("hidden");
   showToast("API key cleared — reload to enter a new key", "info");
+});
+
+// ── Go Live button ───────────────────────────────────────────────────────────
+
+$goLiveBtn.addEventListener("click", () => {
+  timeCursor.goLive(Date.now());
+  timelineSlider.updatePosition();
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────

@@ -89,4 +89,9 @@ _Record here: decisions about replay performance, map source update batching, ma
 
 _Record here: final decisions about edge case handling, Go Live button behavior, tooltip formatting, and any remaining follow-ups or known limitations._
 
-- [ ] TODO — fill in after completing Task 7
+- [x] **Empty event store guard:** Added `if (this.timeRangeMs <= 0) return;` at the top of `TimelineSlider.updatePosition()`. If the time range is zero or negative (e.g., just loaded, no events yet), the thumb stays at the right edge and no position calculations are attempted — prevents NaN/Infinity from zero-division.
+- [x] **"Go Live" button:** Added `<button id="timeline-go-live">` inside `#timeline-slider`, positioned absolutely at top-right. Styled with green border/text matching `--green` CSS variable, with `rgba(52,211,153,0.15)` background and hover darkening. Visibility toggled via `.hidden` class in the `TimeCursor` onChange callback — shown when historical, hidden when live.
+- [x] **Go Live click handler:** Calls `timeCursor.goLive(Date.now())` then `timelineSlider.updatePosition()` to snap back to live immediately. The `goLive()` call fires the onChange callback which hides the button and rebuilds the map with `Infinity` cutoff.
+- [x] **Thumb tooltip:** `title` attribute updated dynamically in `updatePosition()` — shows "Live — drag to travel in time" when live, or `toLocaleTimeString("en-US", { hour12: false })` (e.g., "14:23:05") when in historical mode.
+- [x] **Slider clamping (Step 4):** Not implemented — per plan's suggestion, users can drag freely beyond the event store range. Dragging before the first stored event simply results in an empty map, which is acceptable behavior and avoids coupling the slider to the EventStore.
+- [x] **No deviations from the plan.** All steps implemented exactly as specified. No new tests needed — this task is pure UI/DOM work verified visually.

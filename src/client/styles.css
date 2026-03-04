@@ -809,6 +809,31 @@ body {
   color: var(--red);
 }
 
+.timeline-go-live {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font);
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid var(--green);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+
+.timeline-go-live:hover {
+  background: rgba(52, 211, 153, 0.3);
+}
+
+.timeline-go-live.hidden {
+  display: none;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
