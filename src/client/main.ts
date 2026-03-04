@@ -17,6 +17,9 @@ import type {
   ProtocolVersion,
 } from "../shared/types";
 import { initMap, addTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
+import { EventStore } from "./event-store";
+import { TimeCursor } from "./time-cursor";
+import { TimelineSlider } from "./timeline-slider";
 
 Chart.register(...registerables);
 
@@ -40,6 +43,11 @@ const $menuClearKey = document.getElementById("menu-clear-key")!;
 const $menuClearTiles = document.getElementById("menu-clear-tiles")!;
 const $autoZoomCheckbox = document.getElementById("auto-zoom-checkbox") as HTMLInputElement;
 
+const $timelineTrack = document.getElementById("timeline-slider")!.querySelector(".timeline-track")! as HTMLElement;
+const $timelineThumb = document.getElementById("timeline-thumb")!;
+const $timelineElapsed = document.getElementById("timeline-elapsed")!;
+const $timelineLabelCursor = document.getElementById("timeline-label-cursor")!;
+
 // ── State ────────────────────────────────────────────────────────────────────
 
 let messageCount = 0;
@@ -62,6 +70,31 @@ const rateHistory: Record<string, number[]> = {
 
 // Hit ratio history for chart
 const hitRatioHistory: Map<CacheType, number[]> = new Map();
+
+// ── Time machine state ──────────────────────────────────────────────────────
+
+const eventStore = new EventStore();
+const EVENT_STORE_MAX_AGE_MS = 120_000; // keep 2 minutes of history
+
+const timeCursor = new TimeCursor((state) => {
+  if (state.isLive) {
+    // Resume live: replay all events to rebuild current map state
+    rebuildMapFromStore(Infinity);
+  } else {
+    // Historical: rebuild map up to cursor time
+    rebuildMapFromStore(state.time);
+  }
+});
+
+const timelineSlider = new TimelineSlider(
+  {
+    track: $timelineTrack,
+    thumb: $timelineThumb,
+    elapsed: $timelineElapsed,
+    labelCursor: $timelineLabelCursor,
+  },
+  timeCursor,
+);
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 
@@ -220,6 +253,18 @@ function classifyEvent(evt: string): string {
   return "other";
 }
 
+/**
+ * Rebuild the map from stored events up to `cutoffMs`.
+ * Clears current tiles first, then replays all events in order.
+ */
+function rebuildMapFromStore(cutoffMs: number): void {
+  clearTiles();
+  const batches = eventStore.getEventsUpTo(cutoffMs);
+  for (const batch of batches) {
+    addTileEventsToMap(batch.events, batch.time);
+  }
+}
+
 setInterval(() => {
   // Push current second's buckets into history
   for (const key of Object.keys(rateHistory)) {
@@ -243,6 +288,12 @@ setInterval(() => {
     recentEventCounts.reduce((a, b) => a + b, 0) / recentEventCounts.length;
   $evtPerSec.textContent = `${avg.toFixed(1)} evt/s`;
   currentSecondCount = 0;
+
+  // Prune old events from the store
+  eventStore.prune(Date.now(), EVENT_STORE_MAX_AGE_MS);
+
+  // Tick the timeline slider
+  timelineSlider.tick(Date.now());
 }, 1000);
 
 // ── Tile feed ────────────────────────────────────────────────────────────────
@@ -444,13 +495,21 @@ function showToast(
 // ── Message handlers ─────────────────────────────────────────────────────────
 
 function handleTileBatch(msg: TileBatchMessage): void {
+  // Always update feed, counters, and store — regardless of mode
   for (const te of msg.events) {
     addFeedItem(te, msg.time);
     currentSecondBuckets[classifyEvent(te.event)]++;
     currentSecondCount++;
     totalTileEvents++;
   }
-  addTileEventsToMap(msg.events, msg.time);
+
+  // Always store for replay
+  eventStore.add(msg);
+
+  // Only update map if in live mode
+  if (timeCursor.isLive()) {
+    addTileEventsToMap(msg.events, msg.time);
+  }
 }
 
 function handleCacheStats(msg: CacheStatsMessage): void {

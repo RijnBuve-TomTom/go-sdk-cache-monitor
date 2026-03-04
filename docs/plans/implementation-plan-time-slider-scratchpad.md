@@ -62,7 +62,12 @@ _Record here: decisions about pointer event handling, coordinate-to-time mapping
 
 _Record here: decisions about integration points, gating logic for live vs historical mode, interval timing, and anything that impacts Tasks 6–7._
 
-- [ ] TODO — fill in after completing Task 5
+- [x] **Integration points:** Three new imports (`EventStore`, `TimeCursor`, `TimelineSlider`) added after the `tile-map` import. Four new DOM refs (`$timelineTrack`, `$timelineThumb`, `$timelineElapsed`, `$timelineLabelCursor`) added after the existing DOM refs block. Time machine state block placed between hit ratio history and formatters sections.
+- [x] **Gating logic in `handleTileBatch`:** Feed items, rate counters (`currentSecondBuckets`), and total event count always update regardless of mode — keeping the feed, rate chart, and counters live. `eventStore.add(msg)` always stores for replay. `addTileEventsToMap` is only called when `timeCursor.isLive()` is true — this is the sole gate that freezes the map in historical mode.
+- [x] **`rebuildMapFromStore` approach:** Calls `clearTiles()` then replays all batches via `addTileEventsToMap` in a loop. This is the simple/correct approach for Task 5. Task 6 will replace this with the more efficient `replayTileEventsToMap` that batches all tile updates before a single map source update, avoiding N source updates for N batches.
+- [x] **TimeCursor callback:** Wired directly in the constructor — calls `rebuildMapFromStore(Infinity)` on live resume, `rebuildMapFromStore(state.time)` on historical scrub. This fires on every `setTime()` and `goLive()` call.
+- [x] **Prune and tick in setInterval:** Both `eventStore.prune(Date.now(), 120_000)` and `timelineSlider.tick(Date.now())` added to the existing 1-second interval at the end, after rate chart and events/sec updates. 1-second granularity is sufficient for slider position advancement and store cleanup.
+- [x] **No deviations from the plan.** Implementation matches the plan exactly.
 
 ---
 
