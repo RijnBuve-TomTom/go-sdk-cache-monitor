@@ -171,13 +171,90 @@ function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiL
 // ── Map instance ─────────────────────────────────────────────────────────────
 
 let map: maplibregl.Map | null = null;
-let activePopups: maplibregl.Popup[] = [];
+let activeDialogs: HTMLElement[] = [];
+let dialogZIndex = 400;
 let autoZoomEnabled = true;
 const SOURCE_ID = "nds-tiles";
 const FILL_LAYER_ID = "nds-tiles-fill";
 const LINE_LAYER_ID = "nds-tiles-line";
 const CROSS_SOURCE_ID = "nds-tiles-cross";
 const CROSS_LAYER_ID = "nds-tiles-cross-line";
+
+// ── Draggable tile dialog helpers ─────────────────────────────────────────────
+
+function bringDialogToFront(dialog: HTMLElement): void {
+  dialogZIndex++;
+  dialog.style.zIndex = String(dialogZIndex);
+}
+
+function removeAllDialogs(): void {
+  for (const d of activeDialogs) d.remove();
+  activeDialogs = [];
+}
+
+function createTileDialog(bodyHTML: string, x: number, y: number): HTMLElement {
+  const dialog = document.createElement("div");
+  dialog.className = "tile-dialog";
+  bringDialogToFront(dialog);
+  dialog.style.left = `${x}px`;
+  dialog.style.top = `${y}px`;
+
+  // Header (drag handle + close button)
+  const header = document.createElement("div");
+  header.className = "tile-dialog-header";
+
+  const grip = document.createElement("span");
+  grip.className = "tile-dialog-grip";
+  grip.textContent = "⠿";
+  header.appendChild(grip);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "tile-dialog-close";
+  closeBtn.textContent = "×";
+  closeBtn.addEventListener("click", () => {
+    dialog.remove();
+    activeDialogs = activeDialogs.filter(d => d !== dialog);
+  });
+  header.appendChild(closeBtn);
+
+  // Body
+  const body = document.createElement("div");
+  body.className = "tile-popup";
+  body.innerHTML = bodyHTML;
+
+  dialog.appendChild(header);
+  dialog.appendChild(body);
+
+  // Bring to front on any mousedown inside the dialog
+  dialog.addEventListener("mousedown", () => bringDialogToFront(dialog));
+
+  // Dragging via header
+  let dragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  header.addEventListener("mousedown", (e: MouseEvent) => {
+    dragging = true;
+    dragOffsetX = e.clientX - dialog.offsetLeft;
+    dragOffsetY = e.clientY - dialog.offsetTop;
+    e.preventDefault(); // prevent text selection
+  });
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!dragging) return;
+    dialog.style.left = `${e.clientX - dragOffsetX}px`;
+    dialog.style.top = `${e.clientY - dragOffsetY}px`;
+  };
+
+  const onMouseUp = () => {
+    dragging = false;
+  };
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+
+  return dialog;
+}
 
 export function initMap(): void {
   const apiKey = resolveApiKey();
@@ -243,16 +320,17 @@ export function initMap(): void {
       },
     });
 
-    // Click handler for popups
+    // Click handler for tile dialogs
     map!.on("click", FILL_LAYER_ID, (e) => {
       if (!e.features || e.features.length === 0) return;
 
-      // Remove all existing popups
-      activePopups.forEach(p => p.remove());
-      activePopups = [];
+      // Remove all existing dialogs
+      removeAllDialogs();
 
       // Deduplicate features by tileKey (MapLibre may return duplicates)
       const seen = new Set<string>();
+      const container = document.getElementById("map-container")!;
+      let offsetIndex = 0;
 
       for (const feature of e.features) {
         const key = feature.properties?.tileKey as string;
@@ -263,14 +341,11 @@ export function initMap(): void {
         if (!tracked) continue;
 
         const { bbox, level } = decodeTile(tracked);
-        const centerLng = (bbox.southWest.lng + bbox.northEast.lng) / 2;
-        const centerLat = (bbox.southWest.lat + bbox.northEast.lat) / 2;
 
-        // Build popup HTML
-        let html = `<div class="tile-popup">`;
-        html += `<div class="tile-popup-header">Tile #${tracked.tileId} <span class="tile-popup-level">L${level}</span> <span class="tile-popup-cache">${tracked.cache}</span></div>`;
-        html += `<div class="tile-popup-coords">${bbox.southWest.lat.toFixed(4)}°, ${bbox.southWest.lng.toFixed(4)}° → ${bbox.northEast.lat.toFixed(4)}°, ${bbox.northEast.lng.toFixed(4)}°</div>`;
-        html += `<div class="tile-popup-events">`;
+        // Build dialog body HTML
+        let body = `<div class="tile-popup-header">Tile #${tracked.tileId} <span class="tile-popup-level">L${level}</span> <span class="tile-popup-cache">${tracked.cache}</span></div>`;
+        body += `<div class="tile-popup-coords">${bbox.southWest.lat.toFixed(4)}°, ${bbox.southWest.lng.toFixed(4)}° → ${bbox.northEast.lat.toFixed(4)}°, ${bbox.northEast.lng.toFixed(4)}°</div>`;
+        body += `<div class="tile-popup-events">`;
 
         const recentEvents = tracked.events.slice(-10);
         for (const ev of recentEvents) {
@@ -279,7 +354,7 @@ export function initMap(): void {
           let meta = "";
           if (ev.sizeBytes) meta += ` · ${(ev.sizeBytes / 1024).toFixed(1)} KB`;
           if (ev.httpCode) meta += ` · HTTP ${ev.httpCode}`;
-          html += `<div class="tile-popup-event">
+          body += `<div class="tile-popup-event">
             <span class="tile-popup-time">${time}</span>
             <span style="color:${color};font-weight:600">${ev.event}</span>
             <span class="tile-popup-cache">${ev.cache}</span>
@@ -288,16 +363,18 @@ export function initMap(): void {
         }
 
         if (tracked.events.length > 10) {
-          html += `<div class="tile-popup-more">… and ${tracked.events.length - 10} more</div>`;
+          body += `<div class="tile-popup-more">… and ${tracked.events.length - 10} more</div>`;
         }
+        body += `</div>`;
 
-        html += `</div></div>`;
+        // Calculate pixel position from click point, cascade dialogs
+        const clickX = e.point.x + offsetIndex * 24;
+        const clickY = e.point.y + offsetIndex * 24;
+        offsetIndex++;
 
-        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "340px" })
-          .setLngLat([centerLng, centerLat])
-          .setHTML(html)
-          .addTo(map!);
-        activePopups.push(popup);
+        const dialog = createTileDialog(body, clickX, clickY);
+        container.appendChild(dialog);
+        activeDialogs.push(dialog);
       }
     });
 
@@ -339,8 +416,7 @@ function fitMapToTiles(): void {
 export function clearTiles(): void {
   trackedTiles.clear();
 
-  activePopups.forEach(p => p.remove());
-  activePopups = [];
+  removeAllDialogs();
 
   if (!map) return;
   const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;

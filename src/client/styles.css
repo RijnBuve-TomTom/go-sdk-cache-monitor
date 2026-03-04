@@ -287,32 +287,50 @@ body {
 .legend-swatch[data-event="corruption"] { background: var(--evt-corruption); }
 .legend-swatch[data-event="flush"]      { background: var(--evt-flush); }
 
-/* ── Map popup (MapLibre popup overrides) ─────────────────────────────────── */
+/* ── Draggable tile dialog ─────────────────────────────────────────────────── */
 
-.maplibregl-popup-content {
-  background: var(--bg-panel) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  color: var(--text) !important;
-  padding: 0 !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-  font-family: var(--font) !important;
-  font-size: 0.8rem !important;
+.tile-dialog {
+  position: absolute;
+  width: 340px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  overflow: hidden;
 }
 
-.maplibregl-popup-close-button {
-  color: var(--text-dim) !important;
-  font-size: 18px !important;
-  padding: 2px 8px !important;
+.tile-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 4px 10px;
+  background: var(--bg-card);
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
 }
 
-.maplibregl-popup-close-button:hover {
-  color: var(--text) !important;
-  background: transparent !important;
+.tile-dialog-grip {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
 }
 
-.maplibregl-popup-tip {
-  border-top-color: var(--bg-panel) !important;
+.tile-dialog-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.tile-dialog-close:hover {
+  color: var(--text);
 }
 
 .tile-popup {
