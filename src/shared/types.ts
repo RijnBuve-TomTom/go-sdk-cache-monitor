@@ -97,12 +97,23 @@ export interface CacheEventMessage {
   bytesFlushed?: number | null;
 }
 
+// ── Message: lifecycleEvent ──────────────────────────────────────────────────
+
+export type LifecycleEvent = "started" | "stopped";
+
+export interface LifecycleEventMessage {
+  type: "lifecycleEvent";
+  time: number;
+  event: LifecycleEvent;
+}
+
 // ── Union of all message types ───────────────────────────────────────────────
 
 export type CacheMonitorMessage =
   | TileBatchMessage
   | CacheStatsMessage
-  | CacheEventMessage;
+  | CacheEventMessage
+  | LifecycleEventMessage;
 
 // ── WebSocket wrapper (server → client) ──────────────────────────────────────
 

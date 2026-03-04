@@ -4,6 +4,7 @@ import type {
   TileBatchMessage,
   CacheStatsMessage,
   CacheEventMessage,
+  LifecycleEventMessage,
   CacheStatistics,
   CacheType,
   TileEvent,
@@ -468,6 +469,14 @@ function handleCacheEvent(msg: CacheEventMessage): void {
   }
 }
 
+function handleLifecycleEvent(msg: LifecycleEventMessage): void {
+  if (msg.event === "started") {
+    showToast("🟢 Cache monitor started", "info");
+  } else if (msg.event === "stopped") {
+    showToast("🔴 Cache monitor stopped", "info");
+  }
+}
+
 function handleMessage(msg: CacheMonitorMessage): void {
   messageCount++;
   $msgCounter.textContent = `${fmtNum(messageCount)} msgs`;
@@ -481,6 +490,9 @@ function handleMessage(msg: CacheMonitorMessage): void {
       break;
     case "cacheEvent":
       handleCacheEvent(msg);
+      break;
+    case "lifecycleEvent":
+      handleLifecycleEvent(msg);
       break;
   }
 }

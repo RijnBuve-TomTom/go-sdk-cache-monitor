@@ -13,6 +13,7 @@ import type {
   TileBatchMessage,
   CacheStatsMessage,
   CacheEventMessage,
+  LifecycleEventMessage,
   TileEvent,
   CacheType,
   TileEventType,
@@ -247,6 +248,13 @@ wss.on("connection", (ws) => {
   };
   ws.send(JSON.stringify(status));
 
+  // Send lifecycle "started" to the newly connected client
+  const lifecycleEnvelope: WsEnvelope = {
+    source: "demo",
+    message: generateLifecycleEvent("started"),
+  };
+  ws.send(JSON.stringify(lifecycleEnvelope));
+
   ws.on("close", () => {
     clients.delete(ws);
     console.log(`[demo-ws] Client disconnected (${clients.size} total)`);
@@ -261,6 +269,14 @@ function broadcast(msg: CacheMonitorMessage): void {
       ws.send(json);
     }
   }
+}
+
+// ── Lifecycle events ─────────────────────────────────────────────────────────
+
+function generateLifecycleEvent(
+  event: "started" | "stopped",
+): LifecycleEventMessage {
+  return { type: "lifecycleEvent", time: Date.now(), event };
 }
 
 // ── Timers ───────────────────────────────────────────────────────────────────
@@ -295,10 +311,14 @@ httpServer.listen(PORT, () => {
   console.log(`[demo] Cache Monitor DEMO server on http://localhost:${PORT}`);
   console.log(`[demo] Generating fake data for caches: ${ACTIVE_CACHES.join(", ")}`);
   console.log(`[demo] Open the Vite dev server (default http://localhost:5173) in your browser`);
+
+  // Broadcast lifecycle "started" event once the server is ready
+  broadcast(generateLifecycleEvent("started"));
 });
 
 process.on("SIGINT", () => {
   console.log("\n[demo] Shutting down...");
+  broadcast(generateLifecycleEvent("stopped"));
   wss.close();
   httpServer.close();
   process.exit(0);

@@ -24,7 +24,7 @@ export function parseLogcatLine(
   try {
     const parsed = JSON.parse(jsonStr);
 
-    // Validate it's one of our three message types
+    // Validate it's one of our four message types
     if (
       typeof parsed === "object" &&
       parsed !== null &&
@@ -32,7 +32,8 @@ export function parseLogcatLine(
       typeof parsed.time === "number" &&
       (parsed.type === "tileBatch" ||
         parsed.type === "cacheStats" ||
-        parsed.type === "cacheEvent")
+        parsed.type === "cacheEvent" ||
+        parsed.type === "lifecycleEvent")
     ) {
       return parsed as CacheMonitorMessage;
     }
