@@ -12,14 +12,14 @@
     "demo": "tsx src/server/demo.ts"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.13",
-    "chart.js": "^4.4.7",
-    "concurrently": "^9.1.2",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "@types/ws": "^8.18.1",
+    "chart.js": "^4.5.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }
