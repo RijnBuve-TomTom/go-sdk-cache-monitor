@@ -2,6 +2,8 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
+> **IMPORTANT — Scratchpad rule:** After completing every task, you MUST update `docs/plans/implementation-plan-time-slider-scratchpad.md` with the most important design and implementation decisions made during that task that affect subsequent tasks. Fill in the corresponding "After Task N" section with concrete decisions, trade-offs, discovered issues, and guidance for the next steps. This keeps a living record of context so that later tasks can be executed with full awareness of earlier choices.
+
 **Goal:** Add a draggable timeline slider to the event rate chart that lets users scrub back in time and see the map state at any historical moment, acting as a "time machine."
 
 **Architecture:** Introduce an `EventStore` that buffers all incoming tile batch events with timestamps. A `TimeCursor` state module tracks whether the UI is in "live" mode (green indicator, map updates in real-time) or "historical" mode (red indicator, map frozen at cursor time). A custom timeline slider rendered below the rate chart lets users drag a "now" indicator back and forth. When in historical mode, incoming events are still stored but the map is only rebuilt from events up to the cursor time. Dragging the indicator back to the right edge (current time) re-enables live mode.
@@ -152,6 +154,10 @@ git add src/client/event-store.ts src/client/event-store.test.ts
 git commit -m "feat: add EventStore for time-machine replay"
 ```
 
+**Step 6: Update scratchpad**
+
+Update the "After Task 1" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., data structure choice (flat array vs. other), API surface (`add`, `getEventsUpTo`, `getTimeRange`, `prune`, `size`, `clear`), performance characteristics of `filter()` for `getEventsUpTo`, assumed chronological insertion order, and any deviations from the plan or issues encountered.
+
 ---
 
 ### Task 2: Create the TimeCursor state module
@@ -287,6 +293,10 @@ git add src/client/time-cursor.ts src/client/time-cursor.test.ts
 git commit -m "feat: add TimeCursor state module for live/historical mode"
 ```
 
+**Step 6: Update scratchpad**
+
+Update the "After Task 2" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., callback-based notification pattern, snap threshold value (500ms) and rationale, state representation (boolean `live` + `cursorTime`), and any deviations from the plan or issues encountered.
+
 ---
 
 ### Task 3: Add the timeline slider HTML and CSS
@@ -419,6 +429,10 @@ Run: `npm run demo` in one terminal, `npm run dev` in another. Open `http://loca
 git add src/client/index.html src/client/styles.css
 git commit -m "feat: add timeline slider HTML and CSS"
 ```
+
+**Step 5: Update scratchpad**
+
+Update the "After Task 3" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., DOM structure choices, CSS custom properties used, positioning approach relative to rate chart, and any deviations from the plan or visual issues encountered.
 
 ---
 
@@ -569,6 +583,10 @@ git add src/client/timeline-slider.ts
 git commit -m "feat: add TimelineSlider interaction module"
 ```
 
+**Step 4: Update scratchpad**
+
+Update the "After Task 4" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., pointer event handling approach (mouse + touch), coordinate-to-time mapping logic, dependency on TimeCursor, tick/animation strategy, and any deviations from the plan or issues encountered.
+
 ---
 
 ### Task 5: Wire EventStore and TimeCursor into main.ts
@@ -700,6 +718,10 @@ git add src/client/main.ts
 git commit -m "feat: wire EventStore, TimeCursor, and TimelineSlider into main app"
 ```
 
+**Step 9: Update scratchpad**
+
+Update the "After Task 5" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., integration points in main.ts, how gating logic works (only map frozen, feed/counters/chart stay live), prune interval and max age choice (120s), rebuildMapFromStore approach, and any deviations from the plan or issues encountered.
+
 ---
 
 ### Task 6: Add the `rebuildMapFromStore` function to tile-map.ts as an export
@@ -816,6 +838,10 @@ git add src/client/tile-map.ts src/client/main.ts
 git commit -m "feat: add efficient replayTileEventsToMap for time-machine rebuild"
 ```
 
+**Step 6: Update scratchpad**
+
+Update the "After Task 6" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with key decisions made during this task — e.g., replay performance strategy (batch all tile updates then single map source update), how trackedTiles.clear() interacts with replay, MAX_TILES enforcement during replay, auto-zoom behavior during replay, and any deviations from the plan or issues encountered.
+
 ---
 
 ### Task 7: Visual polish and edge cases
@@ -927,6 +953,10 @@ In `TimelineSlider.handlePointerMove()`, clamp the time to the event store range
 git add src/client/index.html src/client/styles.css src/client/main.ts src/client/timeline-slider.ts
 git commit -m "feat: add Go Live button, tooltip, and visual polish for timeline"
 ```
+
+**Step 7: Update scratchpad**
+
+Update the "After Task 7" section in `docs/plans/implementation-plan-time-slider-scratchpad.md` with final decisions — e.g., edge cases handled (empty store, near-live snap), Go Live button behavior, tooltip formatting, any remaining known limitations or follow-up items, and any deviations from the plan.
 
 ---
 
