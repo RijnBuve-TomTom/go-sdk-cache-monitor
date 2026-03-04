@@ -48,7 +48,13 @@ _Record here: decisions about DOM structure, CSS variable usage, layout position
 
 _Record here: decisions about pointer event handling, coordinate-to-time mapping, touch support approach, and anything that impacts Tasks 5–7._
 
-- [ ] TODO — fill in after completing Task 4
+- [x] **Pointer event handling:** Separate mouse (`mousedown`/`mousemove`/`mouseup`) and touch (`touchstart`/`touchmove`/`touchend`) listeners. `mousedown` and `touchstart` are on the thumb element; `mousemove`/`mouseup` and `touchmove`/`touchend` are on `document` so dragging continues even when the pointer leaves the thumb. Track click also triggers `handlePointerMove` for jump-to-position.
+- [x] **Coordinate-to-time mapping:** `handlePointerMove(clientX)` computes a fraction `(clientX - rect.left) / rect.width` clamped to [0, 1], then maps it to `rangeStart + frac * timeRangeMs` where `rangeStart = latestNow - timeRangeMs`. Calls `cursor.setTime(time, latestNow)` which handles snap-to-live via the 500ms threshold.
+- [x] **Tick/animation strategy:** `tick(now)` updates `latestNow` and calls `updatePosition()` only when in live mode. Caller (main.ts in Task 5) will invoke this from the existing 1-second `setInterval`. No `requestAnimationFrame` loop needed — 1s granularity is sufficient for the slider position.
+- [x] **Visual state toggling:** `updatePosition()` toggles `.historical` class on thumb, elapsed bar, and cursor label — matching the CSS classes defined in Task 3. Label shows "● LIVE" (green) or negative seconds like "-30s" (red).
+- [x] **TimelineSliderElements interface:** Expects `{ track, thumb, elapsed, labelCursor }` — Task 5 will query these by ID from the DOM elements created in Task 3.
+- [x] **Default time range:** 60,000ms (60s) matching the rate chart window. `setTimeRange(ms)` allows changing it if needed.
+- [x] **No deviations from the plan.** Implementation matches the plan exactly. No tests required for this module per plan (it's DOM-dependent; wiring and visual verification happen in Task 5).
 
 ---
 
