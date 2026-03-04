@@ -111,6 +111,7 @@ function buildFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
 
 let map: maplibregl.Map | null = null;
 let popup: maplibregl.Popup | null = null;
+let autoZoomEnabled = true;
 const SOURCE_ID = "nds-tiles";
 const FILL_LAYER_ID = "nds-tiles-fill";
 const LINE_LAYER_ID = "nds-tiles-line";
@@ -190,9 +191,10 @@ export function initMap(): void {
         if (ev.sizeBytes) meta += ` · ${(ev.sizeBytes / 1024).toFixed(1)} KB`;
         if (ev.httpCode) meta += ` · HTTP ${ev.httpCode}`;
         html += `<div class="tile-popup-event">
+          <span class="tile-popup-time">${time}</span>
           <span style="color:${color};font-weight:600">${ev.event}</span>
           <span class="tile-popup-cache">${ev.cache}</span>
-          <span class="tile-popup-time">${time}${meta}</span>
+          ${meta ? `<span class="tile-popup-meta">${meta}</span>` : ""}
         </div>`;
       }
 
@@ -219,6 +221,46 @@ export function initMap(): void {
       map!.getCanvas().style.cursor = "";
     });
   });
+}
+
+// ── Auto-zoom control ────────────────────────────────────────────────────────
+
+export function isAutoZoomEnabled(): boolean {
+  return autoZoomEnabled;
+}
+
+export function setAutoZoomEnabled(enabled: boolean): void {
+  autoZoomEnabled = enabled;
+}
+
+function fitMapToTiles(): void {
+  if (!map || trackedTiles.size === 0) return;
+
+  const bounds = new maplibregl.LngLatBounds();
+  for (const tile of trackedTiles.values()) {
+    const bbox = packedTileIdToBBox(tile.tileId);
+    bounds.extend([bbox.southWest.lng, bbox.southWest.lat]);
+    bounds.extend([bbox.northEast.lng, bbox.northEast.lat]);
+  }
+
+  map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 500 });
+}
+
+// ── Public API: clear tiles ──────────────────────────────────────────────────
+
+export function clearTiles(): void {
+  trackedTiles.clear();
+
+  if (popup) {
+    popup.remove();
+    popup = null;
+  }
+
+  if (!map) return;
+  const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (source) {
+    source.setData(buildFeatureCollection());
+  }
 }
 
 // ── Public API: add tile events ──────────────────────────────────────────────
@@ -275,5 +317,10 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
   const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
   if (source) {
     source.setData(buildFeatureCollection());
+  }
+
+  // Auto-zoom to fit all highlighted tiles
+  if (autoZoomEnabled) {
+    fitMapToTiles();
   }
 }

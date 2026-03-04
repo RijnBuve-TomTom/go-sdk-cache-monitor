@@ -11,7 +11,7 @@ import type {
   WsEnvelope,
   ServerStatus,
 } from "../shared/types";
-import { initMap, addTileEventsToMap, clearApiKey } from "./tile-map";
+import { initMap, addTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
 
 Chart.register(...registerables);
 
@@ -32,6 +32,8 @@ const $toastContainer = document.getElementById("toast-container")!;
 const $menuBtn = document.getElementById("menu-btn")!;
 const $menuDropdown = document.getElementById("menu-dropdown")!;
 const $menuClearKey = document.getElementById("menu-clear-key")!;
+const $menuClearTiles = document.getElementById("menu-clear-tiles")!;
+const $autoZoomCheckbox = document.getElementById("auto-zoom-checkbox") as HTMLInputElement;
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -605,6 +607,17 @@ document.addEventListener("click", () => {
 
 $menuDropdown.addEventListener("click", (e) => {
   e.stopPropagation();
+});
+
+$autoZoomCheckbox.checked = isAutoZoomEnabled();
+$autoZoomCheckbox.addEventListener("change", () => {
+  setAutoZoomEnabled($autoZoomCheckbox.checked);
+});
+
+$menuClearTiles.addEventListener("click", () => {
+  clearTiles();
+  $menuDropdown.classList.add("hidden");
+  showToast("Tile map cleared", "info");
 });
 
 $menuClearKey.addEventListener("click", () => {

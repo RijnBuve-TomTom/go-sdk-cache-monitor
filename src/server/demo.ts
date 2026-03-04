@@ -100,16 +100,7 @@ for (const c of ACTIVE_CACHES) {
 // Pre-compute a pool of realistic NDS.Live packed tile IDs around European cities
 const TILE_LEVEL = 13;
 const CITY_CENTERS = [
-  { lng: 4.8952, lat: 52.3702 },   // Amsterdam
-  { lng: 4.3517, lat: 50.8503 },   // Brussels
-  { lng: 13.4050, lat: 52.5200 },  // Berlin
-  { lng: 2.3522, lat: 48.8566 },   // Paris
-  { lng: -0.1276, lat: 51.5074 },  // London
-  { lng: 12.4964, lat: 41.9028 },  // Rome
-  { lng: -3.7038, lat: 40.4168 },  // Madrid
-  { lng: 14.4378, lat: 50.0755 },  // Prague
-  { lng: 16.3738, lat: 48.2082 },  // Vienna
-  { lng: 21.0122, lat: 52.2297 },  // Warsaw
+  { lng: -3.7038, lat: 40.4168 }  // Madrid
 ];
 
 function generateNdsTileId(): number {
@@ -281,17 +272,17 @@ function generateLifecycleEvent(
 
 // ── Timers ───────────────────────────────────────────────────────────────────
 
-// Tile batches every 250ms
+// Tile batches every 500ms
 setInterval(() => {
   if (clients.size === 0) return;
   broadcast(generateTileBatch());
-}, 250);
+}, 500);
 
-// Cache stats every 15s
+// Cache stats every 10s
 setInterval(() => {
   if (clients.size === 0) return;
   broadcast(generateCacheStats());
-}, 15_000);
+}, 10_000);
 
 // Rare cache events (flush/corruption) every 30–90s
 function scheduleCacheEvent(): void {
