@@ -8,6 +8,7 @@
 
 import { createServer } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
+import { PROTOCOL_VERSION } from "../shared/types.js";
 import type {
   CacheMonitorMessage,
   TileBatchMessage,
@@ -20,6 +21,7 @@ import type {
   WsEnvelope,
   ServerStatus,
   CacheStatistics,
+  ProtocolVersion,
 } from "../shared/types.js";
 import { lngLatToPackedTileId } from "../shared/nds.js";
 import { lngLatToNavTileId } from "../shared/navtile.js";
@@ -255,6 +257,13 @@ const clients = new Set<WebSocket>();
 wss.on("connection", (ws) => {
   clients.add(ws);
   console.log(`[demo-ws] Client connected (${clients.size} total)`);
+
+  // Send protocol version as the very first message
+  const version: ProtocolVersion = {
+    type: "protocolVersion",
+    version: PROTOCOL_VERSION,
+  };
+  ws.send(JSON.stringify(version));
 
   const status: ServerStatus = {
     type: "status",

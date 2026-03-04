@@ -1,4 +1,8 @@
 import { Chart, registerables } from "chart.js";
+import {
+  PROTOCOL_VERSION,
+  checkProtocolCompatibility,
+} from "../shared/types";
 import type {
   CacheMonitorMessage,
   TileBatchMessage,
@@ -10,6 +14,7 @@ import type {
   TileEvent,
   WsEnvelope,
   ServerStatus,
+  ProtocolVersion,
 } from "../shared/types";
 import { initMap, addTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
 
@@ -509,6 +514,66 @@ function setConnected(connected: boolean, deviceId?: string): void {
   $deviceId.textContent = deviceId ? `📱 ${deviceId}` : "";
 }
 
+// ── Protocol version dialog ──────────────────────────────────────────────────
+
+function showVersionMismatchDialog(
+  serverVersion: string,
+  severity: "minor" | "major",
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;
+      display:flex;align-items:center;justify-content:center;
+    `;
+
+    const icon = severity === "major" ? "🚨" : "⚠️";
+    const title = severity === "major"
+      ? "Incompatible Protocol Version"
+      : "Protocol Version Mismatch";
+    const description = severity === "major"
+      ? "The server uses a different <strong>major</strong> protocol version. The client and server are likely <strong>incompatible</strong> and may not work correctly."
+      : "The server uses a different <strong>minor</strong> protocol version. Some features <strong>may not work</strong> as expected.";
+
+    const dialog = document.createElement("div");
+    dialog.style.cssText = `
+      background:var(--surface, #1e1e2e);border:1px solid var(--border, #45475a);
+      border-radius:12px;padding:24px 28px;max-width:420px;width:90%;
+      color:var(--text, #cdd6f4);font-family:inherit;
+    `;
+    dialog.innerHTML = `
+      <div style="font-size:1.4rem;margin-bottom:12px">${icon} ${title}</div>
+      <p style="line-height:1.5;margin:0 0 8px">${description}</p>
+      <p style="margin:0 0 16px;font-size:0.85rem;color:var(--text-dim, #a6adc8)">
+        Client: <strong>v${PROTOCOL_VERSION}</strong> · Server: <strong>v${serverVersion}</strong>
+      </p>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button id="version-disconnect" style="
+          padding:8px 16px;border-radius:6px;border:1px solid var(--border, #45475a);
+          background:transparent;color:var(--text, #cdd6f4);cursor:pointer;
+        ">Disconnect</button>
+        <button id="version-continue" style="
+          padding:8px 16px;border-radius:6px;border:none;
+          background:${severity === "major" ? "var(--red, #f38ba8)" : "var(--orange, #fab387)"};
+          color:#1e1e2e;font-weight:600;cursor:pointer;
+        ">Continue Anyway</button>
+      </div>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    dialog.querySelector("#version-disconnect")!.addEventListener("click", () => {
+      overlay.remove();
+      resolve(false);
+    });
+    dialog.querySelector("#version-continue")!.addEventListener("click", () => {
+      overlay.remove();
+      resolve(true);
+    });
+  });
+}
+
 // ── WebSocket connection ─────────────────────────────────────────────────────
 
 function connectWs(): void {
@@ -521,6 +586,7 @@ function connectWs(): void {
 
   console.log(`[ws] Connecting to ${wsUrl}...`);
   const ws = new WebSocket(wsUrl);
+  let versionChecked = false;
 
   ws.onopen = () => {
     console.log("[ws] Connected");
@@ -530,6 +596,37 @@ function connectWs(): void {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data as string);
+
+      // Protocol version handshake (must be the first message from the server)
+      if (data.type === "protocolVersion") {
+        const msg = data as ProtocolVersion;
+        const severity = checkProtocolCompatibility(PROTOCOL_VERSION, msg.version);
+        console.log(
+          `[ws] Protocol version — client: ${PROTOCOL_VERSION}, server: ${msg.version}, compatibility: ${severity}`,
+        );
+
+        if (severity === "compatible") {
+          versionChecked = true;
+          return;
+        }
+
+        // Show dialog and let the user decide
+        showVersionMismatchDialog(msg.version, severity).then((continueAnyway) => {
+          if (continueAnyway) {
+            versionChecked = true;
+            showToast(
+              `Protocol mismatch (client v${PROTOCOL_VERSION} ↔ server v${msg.version}) — continuing anyway`,
+              "info",
+            );
+          } else {
+            ws.close();
+          }
+        });
+        return;
+      }
+
+      // Drop messages until protocol version is confirmed
+      if (!versionChecked) return;
 
       // Server status message
       if (data.type === "status") {

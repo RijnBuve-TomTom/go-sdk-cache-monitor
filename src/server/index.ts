@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { resolve, extname } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { AdbBridge } from "./adb-bridge.js";
-import type { WsEnvelope, ServerStatus } from "../shared/types.js";
+import { PROTOCOL_VERSION } from "../shared/types.js";
+import type { WsEnvelope, ServerStatus, ProtocolVersion } from "../shared/types.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const isDev = process.env.NODE_ENV !== "production";
@@ -49,6 +50,13 @@ const clients = new Set<WebSocket>();
 wss.on("connection", (ws) => {
   clients.add(ws);
   console.log(`[ws] Client connected (${clients.size} total)`);
+
+  // Send protocol version as the very first message
+  const version: ProtocolVersion = {
+    type: "protocolVersion",
+    version: PROTOCOL_VERSION,
+  };
+  ws.send(JSON.stringify(version));
 
   // Send current status
   const status: ServerStatus = {

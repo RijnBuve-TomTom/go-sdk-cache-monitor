@@ -1,3 +1,36 @@
+// ── Protocol Version ─────────────────────────────────────────────────────────
+
+/**
+ * Protocol version using semantic versioning (x.y.z).
+ *   x = major (breaking change — client and server are incompatible)
+ *   y = minor (may be breaking — some features might not work)
+ *   z = patch (non-breaking — safe to continue)
+ */
+export const PROTOCOL_VERSION = "1.0.0";
+
+export interface ProtocolVersion {
+  type: "protocolVersion";
+  version: string;
+}
+
+/**
+ * Compare two semver strings and return the severity of the mismatch.
+ *   "compatible"  — versions are identical or differ only in patch
+ *   "minor"      — minor version differs (may be breaking)
+ *   "major"      — major version differs (incompatible)
+ */
+export function checkProtocolCompatibility(
+  clientVersion: string,
+  serverVersion: string,
+): "compatible" | "minor" | "major" {
+  const [cMajor, cMinor] = clientVersion.split(".").map(Number);
+  const [sMajor, sMinor] = serverVersion.split(".").map(Number);
+
+  if (cMajor !== sMajor) return "major";
+  if (cMinor !== sMinor) return "minor";
+  return "compatible";
+}
+
 // ── Cache Types ──────────────────────────────────────────────────────────────
 
 export const CACHE_TYPES = [
