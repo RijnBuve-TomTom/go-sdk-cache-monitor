@@ -8,7 +8,12 @@
 
 _Record here: key decisions about data structure choices, performance trade-offs, API surface, and anything that impacts Tasks 2–7._
 
-- [ ] TODO — fill in after completing Task 1
+- [x] **Data structure:** Flat `TileBatchMessage[]` array, appended in chronological order. Simple and sufficient for the expected 2-minute retention window.
+- [x] **API surface:** `add`, `getEventsUpTo`, `getTimeRange`, `prune`, `size`, `clear` — exactly as planned. No deviations.
+- [x] **`getEventsUpTo` uses `Array.filter()`** — O(n) linear scan. Acceptable for a 2-minute window at typical event rates. If performance becomes an issue in Task 6 (replay), a binary search on the sorted `time` field could be added, but premature optimization isn't warranted now.
+- [x] **Chronological insertion assumed:** `add()` does not sort; it trusts that batches arrive in order (guaranteed by the server's streaming order). `getTimeRange()` relies on this by reading first/last elements.
+- [x] **`prune()` takes explicit `now` and `maxAgeMs`** rather than using `Date.now()` internally — keeps the module pure and testable. Caller (main.ts in Task 5) will pass `Date.now()` and `120_000`.
+- [x] **No deviations from the plan.** Implementation matches the plan exactly.
 
 ---
 
