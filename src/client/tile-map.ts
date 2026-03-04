@@ -498,3 +498,75 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
     fitMapToTiles();
   }
 }
+
+// ── Public API: replay tile events efficiently ───────────────────────────────
+
+/**
+ * Replay a series of tile batches onto the map efficiently.
+ * Clears existing tiles, replays all events, then updates the map source once.
+ */
+export function replayTileEventsToMap(
+  batches: { events: TileEvent[]; time: number }[],
+): void {
+  if (!map) return;
+
+  // Clear existing tracked tiles (no map source update yet)
+  trackedTiles.clear();
+  removeAllDialogs();
+
+  // Replay all batches into tracked tiles
+  for (const batch of batches) {
+    for (const te of batch.events) {
+      const key = tileKey(te.cache, te.tileId);
+      const existing = trackedTiles.get(key);
+      if (existing) {
+        existing.events.push({
+          event: te.event,
+          cache: te.cache,
+          time: batch.time,
+          sizeBytes: te.sizeBytes,
+          httpCode: te.httpCode,
+        });
+        existing.latestEvent = te.event;
+        existing.addedAt = batch.time;
+      } else {
+        trackedTiles.set(key, {
+          tileId: te.tileId,
+          cache: te.cache,
+          events: [{
+            event: te.event,
+            cache: te.cache,
+            time: batch.time,
+            sizeBytes: te.sizeBytes,
+            httpCode: te.httpCode,
+          }],
+          latestEvent: te.event,
+          addedAt: batch.time,
+        });
+      }
+    }
+  }
+
+  // Enforce max tile limit (remove oldest)
+  if (trackedTiles.size > MAX_TILES) {
+    const sorted = [...trackedTiles.entries()].sort((a, b) => a[1].addedAt - b[1].addedAt);
+    const toRemove = sorted.slice(0, trackedTiles.size - MAX_TILES);
+    for (const [key] of toRemove) {
+      trackedTiles.delete(key);
+    }
+  }
+
+  // Update map sources once
+  const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (source) {
+    source.setData(buildFeatureCollection());
+  }
+  const crossSource = map.getSource(CROSS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (crossSource) {
+    crossSource.setData(buildCrossFeatureCollection());
+  }
+
+  if (autoZoomEnabled) {
+    fitMapToTiles();
+  }
+}

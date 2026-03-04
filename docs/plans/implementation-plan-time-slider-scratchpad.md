@@ -75,7 +75,13 @@ _Record here: decisions about integration points, gating logic for live vs histo
 
 _Record here: decisions about replay performance, map source update batching, max tile enforcement, and anything that impacts Task 7._
 
-- [ ] TODO — fill in after completing Task 6
+- [x] **Replay performance strategy:** `replayTileEventsToMap` clears `trackedTiles` and `removeAllDialogs()` first (no map source update), then replays all batches into the in-memory `trackedTiles` map, and only updates `SOURCE_ID` and `CROSS_SOURCE_ID` GeoJSON sources once at the end. This avoids N source updates for N batches — the key performance win over the Task 5 approach.
+- [x] **`trackedTiles.clear()` interaction:** The function directly clears the module-level `trackedTiles` map and calls `removeAllDialogs()` without triggering a map source update (unlike `clearTiles()` which does update sources). This is intentional — the single source update at the end covers both the clear and the replay.
+- [x] **MAX_TILES enforcement during replay:** After replaying all batches, the same oldest-first eviction logic from `addTileEventsToMap` is applied. Tiles are sorted by `addedAt` (which is set to `batch.time` during replay, not `Date.now()`) and the oldest are removed to stay under `MAX_TILES`.
+- [x] **`addedAt` uses `batch.time` (not `Date.now()`):** During replay, `addedAt` is set to the batch's original timestamp. This is correct for historical replay — tiles are ordered by when they originally appeared, not when the replay ran. This differs from `addTileEventsToMap` which uses `Date.now()` for live updates.
+- [x] **Auto-zoom during replay:** `fitMapToTiles()` is called once at the end if `autoZoomEnabled` is true, same as `addTileEventsToMap`. This means scrubbing the timeline will re-fit the map to the visible tiles at that point in time.
+- [x] **`rebuildMapFromStore` simplified:** Now just calls `eventStore.getEventsUpTo(cutoffMs)` + `replayTileEventsToMap(batches)` — no more `clearTiles()` + loop. The `clearTiles` import is still needed for the "Clear Tiles" menu action.
+- [x] **No deviations from the plan.** Implementation matches the plan exactly.
 
 ---
 

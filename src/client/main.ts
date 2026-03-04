@@ -16,7 +16,7 @@ import type {
   ServerStatus,
   ProtocolVersion,
 } from "../shared/types";
-import { initMap, addTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
+import { initMap, addTileEventsToMap, replayTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
 import { EventStore } from "./event-store";
 import { TimeCursor } from "./time-cursor";
 import { TimelineSlider } from "./timeline-slider";
@@ -255,14 +255,11 @@ function classifyEvent(evt: string): string {
 
 /**
  * Rebuild the map from stored events up to `cutoffMs`.
- * Clears current tiles first, then replays all events in order.
+ * Uses replayTileEventsToMap for efficient single-source-update replay.
  */
 function rebuildMapFromStore(cutoffMs: number): void {
-  clearTiles();
   const batches = eventStore.getEventsUpTo(cutoffMs);
-  for (const batch of batches) {
-    addTileEventsToMap(batch.events, batch.time);
-  }
+  replayTileEventsToMap(batches);
 }
 
 setInterval(() => {
