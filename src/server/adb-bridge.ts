@@ -12,7 +12,7 @@ export interface AdbBridgeEvents {
 }
 
 /**
- * Spawns `adb logcat -s CacheMonitor:D` and emits parsed messages.
+ * Spawns `adb logcat -s CacheMonitor:D -s CacheMonitorIntegration:D` and emits parsed messages.
  * Automatically reconnects on disconnect.
  */
 export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
@@ -38,9 +38,9 @@ export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
   private connect(): void {
     this.killProcess();
 
-    console.log("[adb] Spawning: adb logcat -s CacheMonitor:D");
+    console.log("[adb] Spawning: adb logcat -s CacheMonitor:D CacheMonitorIntegration:D");
 
-    this.proc = spawn(this.adbPath, ["logcat", "-s", "CacheMonitor:D"], {
+    this.proc = spawn(this.adbPath, ["logcat", "-s", "CacheMonitor:D", "CacheMonitorIntegration:D"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
