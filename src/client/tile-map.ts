@@ -84,6 +84,7 @@ function tileToFeature(tile: TrackedTile): GeoJSON.Feature<GeoJSON.Polygon> {
       level,
       latestEvent: tile.latestEvent,
       eventCount: tile.events.length,
+      hasHistory: tile.events.length > 1 ? 1 : 0,
       color: EVENT_COLORS[tile.latestEvent] ?? "#6c8cff",
       fillOpacity: EVENT_FILL_OPACITY[tile.latestEvent] ?? 0.2,
     },
@@ -107,6 +108,43 @@ function buildFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
   };
 }
 
+/**
+ * Build LineString features for the cross (X) overlay on tiles with history.
+ * Each tile with >1 event gets two diagonal lines from corner to corner.
+ */
+function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiLineString> {
+  const features: GeoJSON.Feature<GeoJSON.MultiLineString>[] = [];
+
+  for (const tile of trackedTiles.values()) {
+    if (tile.events.length <= 1) continue;
+
+    const bbox = packedTileIdToBBox(tile.tileId);
+    const color = EVENT_COLORS[tile.latestEvent] ?? "#6c8cff";
+
+    features.push({
+      type: "Feature",
+      properties: { color },
+      geometry: {
+        type: "MultiLineString",
+        coordinates: [
+          // Diagonal: SW → NE
+          [
+            [bbox.southWest.lng, bbox.southWest.lat],
+            [bbox.northEast.lng, bbox.northEast.lat],
+          ],
+          // Diagonal: NW → SE
+          [
+            [bbox.northWest.lng, bbox.northWest.lat],
+            [bbox.southEast.lng, bbox.southEast.lat],
+          ],
+        ],
+      },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
+}
+
 // ── Map instance ─────────────────────────────────────────────────────────────
 
 let map: maplibregl.Map | null = null;
@@ -115,6 +153,8 @@ let autoZoomEnabled = true;
 const SOURCE_ID = "nds-tiles";
 const FILL_LAYER_ID = "nds-tiles-fill";
 const LINE_LAYER_ID = "nds-tiles-line";
+const CROSS_SOURCE_ID = "nds-tiles-cross";
+const CROSS_LAYER_ID = "nds-tiles-cross-line";
 
 export function initMap(): void {
   const apiKey = resolveApiKey();
@@ -159,6 +199,24 @@ export function initMap(): void {
         "line-color": ["get", "color"],
         "line-width": 1.5,
         "line-opacity": 0.7,
+      },
+    });
+
+    // Cross overlay source + layer (diagonal X on tiles with history)
+    map!.addSource(CROSS_SOURCE_ID, {
+      type: "geojson",
+      data: buildCrossFeatureCollection(),
+    });
+
+    map!.addLayer({
+      id: CROSS_LAYER_ID,
+      type: "line",
+      source: CROSS_SOURCE_ID,
+      paint: {
+        "line-color": ["get", "color"],
+        "line-width": 1.5,
+        "line-opacity": 0.6,
+        "line-dasharray": [4, 2],
       },
     });
 
@@ -261,6 +319,10 @@ export function clearTiles(): void {
   if (source) {
     source.setData(buildFeatureCollection());
   }
+  const crossSource = map.getSource(CROSS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (crossSource) {
+    crossSource.setData(buildCrossFeatureCollection());
+  }
 }
 
 // ── Public API: add tile events ──────────────────────────────────────────────
@@ -317,6 +379,12 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
   const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
   if (source) {
     source.setData(buildFeatureCollection());
+  }
+
+  // Update cross overlay source
+  const crossSource = map.getSource(CROSS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (crossSource) {
+    crossSource.setData(buildCrossFeatureCollection());
   }
 
   // Auto-zoom to fit all highlighted tiles
