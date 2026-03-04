@@ -20,6 +20,7 @@ import type {
   ServerStatus,
   CacheStatistics,
 } from "../shared/types.js";
+import { lngLatToPackedTileId } from "../shared/nds.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
@@ -95,7 +96,28 @@ for (const c of ACTIVE_CACHES) {
 
 // ── Generate tile batch ──────────────────────────────────────────────────────
 
-let tileIdCounter = 100_000;
+// Pre-compute a pool of realistic NDS.Live packed tile IDs around European cities
+const TILE_LEVEL = 13;
+const CITY_CENTERS = [
+  { lng: 4.8952, lat: 52.3702 },   // Amsterdam
+  { lng: 4.3517, lat: 50.8503 },   // Brussels
+  { lng: 13.4050, lat: 52.5200 },  // Berlin
+  { lng: 2.3522, lat: 48.8566 },   // Paris
+  { lng: -0.1276, lat: 51.5074 },  // London
+  { lng: 12.4964, lat: 41.9028 },  // Rome
+  { lng: -3.7038, lat: 40.4168 },  // Madrid
+  { lng: 14.4378, lat: 50.0755 },  // Prague
+  { lng: 16.3738, lat: 48.2082 },  // Vienna
+  { lng: 21.0122, lat: 52.2297 },  // Warsaw
+];
+
+function generateNdsTileId(): number {
+  const city = pick(CITY_CENTERS);
+  // Add jitter: ~0.2 degrees around city center so tiles cluster nearby
+  const lng = city.lng + (Math.random() - 0.5) * 0.4;
+  const lat = city.lat + (Math.random() - 0.5) * 0.4;
+  return lngLatToPackedTileId({ lng, lat }, TILE_LEVEL);
+}
 
 function generateTileBatch(): TileBatchMessage {
   const count = randInt(1, 8);
@@ -104,7 +126,7 @@ function generateTileBatch(): TileBatchMessage {
   for (let i = 0; i < count; i++) {
     const cache = pick(ACTIVE_CACHES);
     const event = weightedEvent();
-    const tileId = tileIdCounter++;
+    const tileId = generateNdsTileId();
 
     const te: TileEvent = { cache, tileId, event };
 

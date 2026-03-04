@@ -10,6 +10,7 @@ import type {
   WsEnvelope,
   ServerStatus,
 } from "../shared/types";
+import { initMap, addTileEventsToMap } from "./tile-map";
 
 Chart.register(...registerables);
 
@@ -438,6 +439,7 @@ function handleTileBatch(msg: TileBatchMessage): void {
     currentSecondCount++;
     totalTileEvents++;
   }
+  addTileEventsToMap(msg.events, msg.time);
 }
 
 function handleCacheStats(msg: CacheStatsMessage): void {
@@ -577,6 +579,7 @@ $floatingToggle.addEventListener("click", () => {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
+initMap();
 connectWs();
 renderFloatingStats();
 

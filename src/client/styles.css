@@ -35,6 +35,8 @@
   --font: "SF Mono", "Fira Code", "JetBrains Mono", "Consolas", monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius: 8px;
+
+  --header-h: 46px;
 }
 
 html {
@@ -45,8 +47,8 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
@@ -61,6 +63,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  height: var(--header-h);
 }
 
 .header-left {
@@ -128,14 +131,170 @@ body {
   font-size: 0.85rem;
 }
 
-/* ── Main grid ────────────────────────────────────────────────────────────── */
+/* ── Map (top half) ───────────────────────────────────────────────────────── */
+
+#map-container {
+  position: relative;
+  height: calc(50vh - var(--header-h) / 2);
+  border-bottom: 1px solid var(--border);
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Map legend ───────────────────────────────────────────────────────────── */
+
+.map-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(15, 17, 23, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-dim);
+  z-index: 10;
+  backdrop-filter: blur(6px);
+}
+
+.legend-title {
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 2px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.legend-swatch[data-event="hit"]        { background: var(--evt-hit); }
+.legend-swatch[data-event="miss"]       { background: var(--evt-miss); }
+.legend-swatch[data-event="download"]   { background: var(--evt-download); }
+.legend-swatch[data-event="evict"]      { background: var(--evt-evict); }
+.legend-swatch[data-event="expiredHit"] { background: var(--evt-expired); }
+.legend-swatch[data-event="update"]     { background: var(--evt-update); }
+.legend-swatch[data-event="corruption"] { background: var(--evt-corruption); }
+.legend-swatch[data-event="flush"]      { background: var(--evt-flush); }
+
+/* ── Map popup (MapLibre popup overrides) ─────────────────────────────────── */
+
+.maplibregl-popup-content {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  font-family: var(--font) !important;
+  font-size: 0.8rem !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--text-dim) !important;
+  font-size: 18px !important;
+  padding: 2px 8px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: var(--text) !important;
+  background: transparent !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--bg-panel) !important;
+}
+
+.tile-popup {
+  padding: 10px 14px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tile-popup-header {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--cyan);
+  margin-bottom: 4px;
+}
+
+.tile-popup-level {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.tile-popup-coords {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tile-popup-events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tile-popup-event {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 0.78rem;
+}
+
+.tile-popup-cache {
+  color: var(--cyan);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-popup-time {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.tile-popup-more {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  text-align: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* ── Main grid (bottom half) ──────────────────────────────────────────────── */
 
 #main {
   display: grid;
   grid-template-columns: 340px 1fr 380px;
   gap: 12px;
   padding: 12px;
-  height: calc(100vh - 50px);
+  height: calc(50vh - var(--header-h) / 2);
+  overflow: hidden;
 }
 
 .panel {
@@ -167,7 +326,7 @@ body {
   gap: 3px;
   font-size: 0.82rem;
   overflow-y: auto;
-  max-height: calc(100vh - 140px);
+  max-height: calc(50vh - 140px);
 }
 
 .feed-item {
@@ -316,7 +475,7 @@ body {
   bottom: 16px;
   right: 16px;
   width: 420px;
-  max-height: 60vh;
+  max-height: 40vh;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -472,15 +631,24 @@ body {
   }
   #tile-feed {
     grid-column: 1 / -1;
-    max-height: 300px;
+    max-height: 200px;
   }
 }
 
 @media (max-width: 768px) {
+  #map-container {
+    height: 40vh;
+  }
   #main {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow-y: auto;
   }
   .floating-window {
     width: calc(100vw - 32px);
+  }
+  .map-legend {
+    flex-wrap: wrap;
+    gap: 4px 8px;
   }
 }

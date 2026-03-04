@@ -12,6 +12,7 @@
     "demo": "tsx src/server/demo.ts"
   },
   "dependencies": {
+    "maplibre-gl": "^5.19.0",
     "ws": "^8.19.0"
   },
   "devDependencies": {

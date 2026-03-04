@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cache Monitor</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -20,7 +21,23 @@
     </div>
   </header>
 
-  <!-- ── Main grid ──────────────────────────────────────────────────────── -->
+  <!-- ── Top half: Map ─────────────────────────────────────────────────── -->
+  <section id="map-container">
+    <div id="map"></div>
+    <div id="map-legend" class="map-legend">
+      <span class="legend-title">Tile Events</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="hit"></span>Hit</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="miss"></span>Miss</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="download"></span>Download</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="evict"></span>Evict</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="expiredHit"></span>Expired</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="update"></span>Update</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="corruption"></span>Corruption</span>
+      <span class="legend-item"><span class="legend-swatch" data-event="flush"></span>Flush</span>
+    </div>
+  </section>
+
+  <!-- ── Bottom half: Dashboard grid ───────────────────────────────────── -->
   <main id="main">
     <!-- Left: Tile event feed -->
     <section id="tile-feed" class="panel">
