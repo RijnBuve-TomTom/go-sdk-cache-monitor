@@ -10,7 +10,7 @@ import type {
   WsEnvelope,
   ServerStatus,
 } from "../shared/types";
-import { initMap, addTileEventsToMap } from "./tile-map";
+import { initMap, addTileEventsToMap, clearApiKey } from "./tile-map";
 
 Chart.register(...registerables);
 
@@ -28,6 +28,9 @@ const $floatingToggle = document.getElementById("floating-toggle")!;
 const $floatingHeader = document.getElementById("floating-header")!;
 const $floatingWindow = document.getElementById("floating-stats")!;
 const $toastContainer = document.getElementById("toast-container")!;
+const $menuBtn = document.getElementById("menu-btn")!;
+const $menuDropdown = document.getElementById("menu-dropdown")!;
+const $menuClearKey = document.getElementById("menu-clear-key")!;
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -575,6 +578,27 @@ $floatingToggle.addEventListener("click", () => {
   $floatingToggle.textContent = $floatingBody.classList.contains("collapsed")
     ? "□"
     : "_";
+});
+
+// ── Menu ─────────────────────────────────────────────────────────────────────
+
+$menuBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  $menuDropdown.classList.toggle("hidden");
+});
+
+document.addEventListener("click", () => {
+  $menuDropdown.classList.add("hidden");
+});
+
+$menuDropdown.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+$menuClearKey.addEventListener("click", () => {
+  clearApiKey();
+  $menuDropdown.classList.add("hidden");
+  showToast("API key cleared — reload to enter a new key", "info");
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────

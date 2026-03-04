@@ -16,9 +16,9 @@ The serialization/output logic lives in `CacheMonitorOutput.kt`.
 
 ---
 
-### Three Message Types (`CacheEventMessage`)
+### Four Message Types (`CacheEventMessage`)
 
-The cache monitor emits exactly **three types of JSON messages**, defined as a sealed class in `CacheEventMessage.kt`:
+The cache monitor emits exactly **four types of JSON messages**, defined as a sealed class in `CacheEventMessage.kt`:
 
 ---
 
@@ -27,19 +27,19 @@ The cache monitor emits exactly **three types of JSON messages**, defined as a s
 Example JSON structure:
 ```json
 {
-  "type": "tileBatch",
-  "time": 1709478000000,
-  "events": [
-    {
-      "cache": "ndsLive",
-      "tileId": 12345,
-      "event": "hit",
-      "sizeBytes": 4096,
-      "httpCode": 200,
-      "trigger": "alongRoute",
-      "ageSeconds": 120.5
-    }
-  ]
+    "type": "tileBatch",
+    "time": 1709478000000,
+    "events": [
+        {
+            "cache": "ndsLive",
+            "tileId": 12345,
+            "event": "hit",
+            "sizeBytes": 4096,
+            "httpCode": 200,
+            "trigger": "alongRoute",
+            "ageSeconds": 120.5
+        }
+    ]
 }
 ```
 
@@ -59,27 +59,27 @@ Each event in the batch is a `TileEvent` with:
 Example JSON structure:
 ```json
 {
-  "type": "cacheStats",
-  "time": 1709478000000,
-  "caches": {
-    "ndsLive": {
-      "tileCount": 150,
-      "totalRequests": 500,
-      "cacheHits": 400,
-      "cacheMisses": 100,
-      "hitRatio": 0.8,
-      "totalDownloadedBytes": 2048000,
-      "diskUsedBytes": 1024000,
-      "diskConfiguredBytes": 5242880,
-      "diskRemainingBytes": 4218880,
-      "evictions": 10,
-      "averageTileAgeSeconds": 300.5,
-      "downloadsAfterEviction": 5,
-      "flushes": 0,
-      "corruptions": 0,
-      "totalUploadedBytes": 0
+    "type": "cacheStats",
+    "time": 1709478000000,
+    "caches": {
+        "ndsLive": {
+            "tileCount": 150,
+            "totalRequests": 500,
+            "cacheHits": 400,
+            "cacheMisses": 100,
+            "hitRatio": 0.8,
+            "totalDownloadedBytes": 2048000,
+            "diskUsedBytes": 1024000,
+            "diskConfiguredBytes": 5242880,
+            "diskRemainingBytes": 4218880,
+            "evictions": 10,
+            "averageTileAgeSeconds": 300.5,
+            "downloadsAfterEviction": 5,
+            "flushes": 0,
+            "corruptions": 0,
+            "totalUploadedBytes": 0
+        }
     }
-  }
 }
 ```
 
@@ -104,13 +104,13 @@ Example JSON structure:
 Example JSON structure:
 ```json
 {
-  "type": "cacheEvent",
-  "time": 1709478000000,
-  "cache": "ndsLive",
-  "event": "flush",
-  "reason": "userRequested",
-  "tilesFlushed": 150,
-  "bytesFlushed": 1024000
+    "type": "cacheEvent",
+    "time": 1709478000000,
+    "cache": "ndsLive",
+    "event": "flush",
+    "reason": "userRequested",
+    "tilesFlushed": 150,
+    "bytesFlushed": 1024000
 }
 ```
 
@@ -120,6 +120,26 @@ Fields:
 - `reason` — optional reason string (omitted if null)
 - `tilesFlushed` — optional count (omitted if null)
 - `bytesFlushed` — optional byte count (omitted if null)
+
+---
+
+#### 4. `lifecycleEvent` — Cache monitor lifecycle transitions (tag: `CacheMonitorIntegration`)
+
+Example JSON structure:
+```json
+{
+    "type": "lifecycleEvent",
+    "time": 1709478000000,
+    "event": "started"
+}
+```
+
+Fields:
+- `event` — the lifecycle event: `"started"` or `"stopped"`
+- `time` — Unix timestamp in milliseconds
+
+This message is emitted by the `CacheMonitorIntegration` wrapper in the demo app
+with the logcat tag **`CacheMonitorIntegration`** (not `CacheMonitor`).
 
 ---
 
@@ -173,5 +193,6 @@ Defined in `CacheType.kt`, the possible cache types are:
 | `tileBatch` | 250ms | Only emitted when there are buffered events |
 | `cacheStats` | 15,000ms (15s) | Only emitted when at least one cache has data |
 | `cacheEvent` | Immediate | Emitted instantly for significant one-off events |
+| `lifecycleEvent` | Immediate | Emitted on cache monitor start and stop |
 
-Note: The `CacheMonitor` constructor in `CacheMonitor.kt` allows overriding `batchIntervalMs` and `statsIntervalMs` for testing purposes. The `CacheMonitorIntegration` wrapper in the demo app additionally logs `"CacheMonitor started"` and `"CacheMonitor stopped"` messages with the tag `CacheMonitorIntegration`.
+Note: The `CacheMonitor` constructor in `CacheMonitor.kt` allows overriding `batchIntervalMs` and `statsIntervalMs` for testing purposes. The `CacheMonitorIntegration` wrapper in the demo app logs structured JSON `lifecycleEvent` messages with the tag `CacheMonitorIntegration` when the cache monitor is started or stopped.

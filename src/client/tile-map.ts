@@ -2,9 +2,37 @@ import maplibregl from "maplibre-gl";
 import type { TileEvent, TileEventType } from "../shared/types";
 import { packedTileIdToBBox, packedTileIdToLevel } from "../shared/nds";
 
-// ── Injected at build time by Vite from config.properties ────────────────────
+// ── API key management (stored in browser localStorage) ──────────────────────
 
-declare const __TOMTOM_API_KEY__: string;
+const API_KEY_STORAGE_KEY = "tomtom-api-key";
+
+export function getApiKey(): string | null {
+  return localStorage.getItem(API_KEY_STORAGE_KEY);
+}
+
+export function clearApiKey(): void {
+  localStorage.removeItem(API_KEY_STORAGE_KEY);
+}
+
+function promptForApiKey(): string | null {
+  const key = window.prompt(
+    "Enter your TomTom API key\n(get one at https://developer.tomtom.com/)",
+  );
+  if (key && key.trim()) {
+    const trimmed = key.trim();
+    localStorage.setItem(API_KEY_STORAGE_KEY, trimmed);
+    return trimmed;
+  }
+  return null;
+}
+
+function resolveApiKey(): string | null {
+  let key = getApiKey();
+  if (!key) {
+    key = promptForApiKey();
+  }
+  return key;
+}
 
 // ── Event type → color mapping ───────────────────────────────────────────────
 
@@ -88,8 +116,8 @@ const FILL_LAYER_ID = "nds-tiles-fill";
 const LINE_LAYER_ID = "nds-tiles-line";
 
 export function initMap(): void {
-  const apiKey = __TOMTOM_API_KEY__;
-  const styleUrl = apiKey && apiKey !== "YOUR_API_KEY_HERE"
+  const apiKey = resolveApiKey();
+  const styleUrl = apiKey
     ? `https://api.tomtom.com/style/1/style/*?map=basic_night&key=${apiKey}`
     : "https://demotiles.maplibre.org/style.json";
 
