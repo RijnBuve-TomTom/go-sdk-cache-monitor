@@ -64,6 +64,19 @@
     <section id="charts" class="panel">
       <h2>Event Rate <small>(last 60s)</small></h2>
       <canvas id="rate-chart" height="200"></canvas>
+      <div id="timeline-slider" class="timeline-slider">
+        <div class="timeline-track">
+          <div class="timeline-elapsed" id="timeline-elapsed"></div>
+          <div class="timeline-thumb" id="timeline-thumb" title="Drag to travel in time">
+            <span class="timeline-thumb-arrow">▼</span>
+          </div>
+        </div>
+        <div class="timeline-labels">
+          <span id="timeline-label-start" class="timeline-label">-60s</span>
+          <span id="timeline-label-cursor" class="timeline-label timeline-label-cursor"></span>
+          <span id="timeline-label-end" class="timeline-label">now</span>
+        </div>
+      </div>
       <h2>Hit Ratio <small>(per cache)</small></h2>
       <canvas id="hit-ratio-chart" height="200"></canvas>
     </section>

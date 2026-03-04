@@ -35,7 +35,12 @@ _Record here: decisions about state management approach, callback design, snap t
 
 _Record here: decisions about DOM structure, CSS variable usage, layout positioning relative to the rate chart, and anything that impacts Tasks 4–7._
 
-- [ ] TODO — fill in after completing Task 3
+- [x] **DOM structure:** Slider inserted directly after the `<canvas id="rate-chart">` inside `<section id="charts">`, before the Hit Ratio chart. Structure is `#timeline-slider > .timeline-track > (.timeline-elapsed + .timeline-thumb)` plus `.timeline-labels` with three spans (start, cursor, end).
+- [x] **Element IDs for Task 4/5 wiring:** `timeline-slider` (container), `timeline-elapsed` (filled portion), `timeline-thumb` (draggable indicator), `timeline-label-start`, `timeline-label-cursor`, `timeline-label-end`. Task 4's `TimelineSliderElements` interface expects `track`, `thumb`, `elapsed`, `labelCursor` — all present.
+- [x] **CSS custom properties:** Uses existing `:root` variables — `--bg-card` (track background), `--border` (track border), `--green` (live state color), `--red` (historical state color via `.historical` class), `--text-dim` (label color), `--font` (label font). No new CSS variables introduced.
+- [x] **Historical state toggling:** `.historical` class is defined for `.timeline-elapsed`, `.timeline-thumb`, and `.timeline-label-cursor` — switches color from green to red. Task 4's `updatePosition()` will toggle this class via `classList.add/remove`.
+- [x] **Thumb uses `▼` arrow character** (`<span class="timeline-thumb-arrow">▼</span>`) styled with `drop-shadow` filter for visibility against the dark background. Positioned with `transform: translate(-50%, -50%)` for center-alignment on the track.
+- [x] **No deviations from the plan.** Implementation matches the plan exactly.
 
 ---
 

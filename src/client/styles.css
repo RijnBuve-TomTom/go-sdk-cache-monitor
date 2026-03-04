@@ -723,6 +723,92 @@ body {
   to { opacity: 0; transform: translateY(-10px); }
 }
 
+/* ── Timeline slider ──────────────────────────────────────────────────────── */
+
+.timeline-slider {
+  position: relative;
+  padding: 6px 8px 2px;
+  user-select: none;
+}
+
+.timeline-track {
+  position: relative;
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.timeline-elapsed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: background 0.2s;
+  pointer-events: none;
+}
+
+.timeline-elapsed.historical {
+  background: var(--red);
+}
+
+.timeline-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 10;
+  color: var(--green);
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  transition: color 0.2s;
+}
+
+.timeline-thumb.historical {
+  color: var(--red);
+}
+
+.timeline-thumb:active {
+  cursor: grabbing;
+}
+
+.timeline-thumb-arrow {
+  line-height: 1;
+}
+
+.timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.timeline-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-family: var(--font);
+}
+
+.timeline-label-cursor {
+  font-weight: 700;
+  color: var(--green);
+  transition: color 0.2s;
+  min-width: 60px;
+  text-align: center;
+}
+
+.timeline-label-cursor.historical {
+  color: var(--red);
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
