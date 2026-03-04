@@ -21,7 +21,13 @@ _Record here: key decisions about data structure choices, performance trade-offs
 
 _Record here: decisions about state management approach, callback design, snap threshold rationale, and anything that impacts Tasks 3–7._
 
-- [ ] TODO — fill in after completing Task 2
+- [x] **State representation:** Boolean `live` flag + numeric `cursorTime`. Starts in live mode (`live = true`, `cursorTime = 0`). Simple and sufficient — no enum or state machine needed.
+- [x] **Callback-based notification:** Constructor takes a single `TimeCursorChangeCallback` that fires on every `setTime()` and `goLive()` call with `{ isLive, time }`. This decouples the cursor from DOM/UI — the callback in Task 5 will handle map rebuilds and UI updates.
+- [x] **Snap threshold:** 500ms (`SNAP_THRESHOLD_MS`). Uses `Math.abs(time - now)` so it works for both dragging from the left (past) toward now and edge cases. When snapping, `cursorTime` is set to `now` (not the raw drag time) for clean state.
+- [x] **`setTime(time, now)` takes explicit `now` parameter** — same pure/testable pattern as EventStore's `prune()`. Caller passes `Date.now()` or `latestNow` from the slider tick. This keeps the module deterministic in tests.
+- [x] **`goLive(now)` is unconditional** — always sets `live = true` and fires callback, even if already live. This simplifies the "Go Live" button wiring in Task 7 (no need to check current state first).
+- [x] **Exported types:** `TimeCursorState` interface and `TimeCursorChangeCallback` type are exported for use by TimelineSlider (Task 4) and main.ts (Task 5).
+- [x] **No deviations from the plan.** Implementation and tests match the plan exactly.
 
 ---
 
