@@ -6,10 +6,10 @@ The data model for the cache monitor is located in the `telemetry/cache-monitor`
 telemetry/cache-monitor/src/commonMain/kotlin/com/tomtom/sdk/telemetry/cachemonitor/model/
 ```
 
-All messages are written as **single-line JSON** to Android logcat via `Log.d` with the tag **`CacheMonitor`**. You can filter for them with:
+All messages are written as **single-line JSON** to Android logcat via `Log.d` with the tag **`CacheMonitor`** and **`CacheMonitorIntegration`**. You can filter for them with:
 
 ```bash
-adb logcat -s CacheMonitor:D
+adb logcat -s CacheMonitor:D CacheMonitorIntegration:D
 ```
 
 The serialization/output logic lives in `CacheMonitorOutput.kt`.
