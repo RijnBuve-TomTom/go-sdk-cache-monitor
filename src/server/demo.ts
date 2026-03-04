@@ -22,6 +22,7 @@ import type {
   CacheStatistics,
 } from "../shared/types.js";
 import { lngLatToPackedTileId } from "../shared/nds.js";
+import { lngLatToNavTileId } from "../shared/navtile.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
@@ -111,6 +112,22 @@ function generateNdsTileId(): number {
   return lngLatToPackedTileId({ lng, lat }, TILE_LEVEL);
 }
 
+function generateNavTileId(level: number): number {
+  const city = pick(CITY_CENTERS);
+  const lng = city.lng + (Math.random() - 0.5) * 0.4;
+  const lat = city.lat + (Math.random() - 0.5) * 0.4;
+  return lngLatToNavTileId({ lng, lat }, level);
+}
+
+function pickNonNdsLevel(): number {
+  const r = Math.random();
+  if (r < 0.45) return 13;      // 45% level 13
+  if (r < 0.90) return 12;      // 45% level 12
+  if (r < 0.95) return 11;      // 5% level 11
+  if (r < 0.98) return 10;      // 3% level 10
+  return randInt(7, 9);          // 2% levels 7-9 (rare)
+}
+
 function generateTileBatch(): TileBatchMessage {
   const count = randInt(1, 8);
   const events: TileEvent[] = [];
@@ -118,7 +135,14 @@ function generateTileBatch(): TileBatchMessage {
   for (let i = 0; i < count; i++) {
     const cache = pick(ACTIVE_CACHES);
     const event = weightedEvent();
-    const tileId = generateNdsTileId();
+
+    let tileId: number;
+    if (cache === "ndsLive") {
+      tileId = generateNdsTileId();        // NDS.Live, always level 13
+    } else {
+      const level = pickNonNdsLevel();
+      tileId = generateNavTileId(level);   // NavTile, variable levels
+    }
 
     const te: TileEvent = { cache, tileId, event };
 

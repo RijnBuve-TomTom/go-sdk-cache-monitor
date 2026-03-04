@@ -3,6 +3,10 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   root: "src/client",
+  test: {
+    root: resolve(__dirname),
+    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+  },
   publicDir: resolve(__dirname, "public"),
   server: {
     port: 5173,

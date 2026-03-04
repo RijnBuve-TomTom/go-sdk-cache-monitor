@@ -1,6 +1,8 @@
 import maplibregl from "maplibre-gl";
 import type { TileEvent, TileEventType } from "../shared/types";
 import { packedTileIdToBBox, packedTileIdToLevel } from "../shared/nds";
+import type { TileBoundingBox } from "../shared/nds";
+import { navTileIdToBBox, navTileIdToLevel } from "../shared/navtile";
 
 // ── API key management (stored in browser localStorage) ──────────────────────
 
@@ -62,6 +64,7 @@ const EVENT_FILL_OPACITY: Record<TileEventType, number> = {
 
 interface TrackedTile {
   tileId: number;
+  cache: string;
   events: { event: TileEventType; cache: string; time: number; sizeBytes?: number | null; httpCode?: number | null }[];
   latestEvent: TileEventType;
   addedAt: number;
@@ -70,17 +73,37 @@ interface TrackedTile {
 const MAX_TILES = 500;
 const TILE_TTL_MS = 60_000; // tiles fade after 60s
 
-const trackedTiles: Map<number, TrackedTile> = new Map();
+const trackedTiles: Map<string, TrackedTile> = new Map();
+
+function tileKey(cache: string, tileId: number): string {
+  return `${cache}:${tileId}`;
+}
+
+function decodeTile(tile: TrackedTile): { bbox: TileBoundingBox; level: number } {
+  if (tile.cache === "ndsLive") {
+    return {
+      bbox: packedTileIdToBBox(tile.tileId),
+      level: packedTileIdToLevel(tile.tileId),
+    };
+  } else {
+    return {
+      bbox: navTileIdToBBox(tile.tileId),
+      level: navTileIdToLevel(tile.tileId),
+    };
+  }
+}
 
 // ── GeoJSON helpers ──────────────────────────────────────────────────────────
 
 function tileToFeature(tile: TrackedTile): GeoJSON.Feature<GeoJSON.Polygon> {
-  const bbox = packedTileIdToBBox(tile.tileId);
-  const level = packedTileIdToLevel(tile.tileId);
+  const { bbox, level } = decodeTile(tile);
+  const key = tileKey(tile.cache, tile.tileId);
   return {
     type: "Feature",
     properties: {
+      tileKey: key,
       tileId: tile.tileId,
+      cache: tile.cache,
       level,
       latestEvent: tile.latestEvent,
       eventCount: tile.events.length,
@@ -118,7 +141,7 @@ function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiL
   for (const tile of trackedTiles.values()) {
     if (tile.events.length <= 1) continue;
 
-    const bbox = packedTileIdToBBox(tile.tileId);
+    const { bbox } = decodeTile(tile);
     const color = EVENT_COLORS[tile.latestEvent] ?? "#6c8cff";
 
     features.push({
@@ -148,7 +171,7 @@ function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiL
 // ── Map instance ─────────────────────────────────────────────────────────────
 
 let map: maplibregl.Map | null = null;
-let popup: maplibregl.Popup | null = null;
+let activePopups: maplibregl.Popup[] = [];
 let autoZoomEnabled = true;
 const SOURCE_ID = "nds-tiles";
 const FILL_LAYER_ID = "nds-tiles-fill";
@@ -224,51 +247,58 @@ export function initMap(): void {
     map!.on("click", FILL_LAYER_ID, (e) => {
       if (!e.features || e.features.length === 0) return;
 
-      const feature = e.features[0];
-      const tileId = feature.properties?.tileId as number;
-      const tracked = trackedTiles.get(tileId);
-      if (!tracked) return;
+      // Remove all existing popups
+      activePopups.forEach(p => p.remove());
+      activePopups = [];
 
-      const level = feature.properties?.level ?? 0;
-      const bbox = packedTileIdToBBox(tileId);
-      const centerLng = (bbox.southWest.lng + bbox.northEast.lng) / 2;
-      const centerLat = (bbox.southWest.lat + bbox.northEast.lat) / 2;
+      // Deduplicate features by tileKey (MapLibre may return duplicates)
+      const seen = new Set<string>();
 
-      // Build popup content
-      let html = `<div class="tile-popup">`;
-      html += `<div class="tile-popup-header">Tile #${tileId} <span class="tile-popup-level">L${level}</span></div>`;
-      html += `<div class="tile-popup-coords">${bbox.southWest.lat.toFixed(4)}°, ${bbox.southWest.lng.toFixed(4)}° → ${bbox.northEast.lat.toFixed(4)}°, ${bbox.northEast.lng.toFixed(4)}°</div>`;
-      html += `<div class="tile-popup-events">`;
+      for (const feature of e.features) {
+        const key = feature.properties?.tileKey as string;
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
 
-      // Show last 10 events for this tile
-      const recentEvents = tracked.events.slice(-10);
-      for (const ev of recentEvents) {
-        const time = new Date(ev.time).toLocaleTimeString("en-US", { hour12: false });
-        const color = EVENT_COLORS[ev.event] ?? "#6c8cff";
-        let meta = "";
-        if (ev.sizeBytes) meta += ` · ${(ev.sizeBytes / 1024).toFixed(1)} KB`;
-        if (ev.httpCode) meta += ` · HTTP ${ev.httpCode}`;
-        html += `<div class="tile-popup-event">
-          <span class="tile-popup-time">${time}</span>
-          <span style="color:${color};font-weight:600">${ev.event}</span>
-          <span class="tile-popup-cache">${ev.cache}</span>
-          ${meta ? `<span class="tile-popup-meta">${meta}</span>` : ""}
-        </div>`;
+        const tracked = trackedTiles.get(key);
+        if (!tracked) continue;
+
+        const { bbox, level } = decodeTile(tracked);
+        const centerLng = (bbox.southWest.lng + bbox.northEast.lng) / 2;
+        const centerLat = (bbox.southWest.lat + bbox.northEast.lat) / 2;
+
+        // Build popup HTML
+        let html = `<div class="tile-popup">`;
+        html += `<div class="tile-popup-header">Tile #${tracked.tileId} <span class="tile-popup-level">L${level}</span> <span class="tile-popup-cache">${tracked.cache}</span></div>`;
+        html += `<div class="tile-popup-coords">${bbox.southWest.lat.toFixed(4)}°, ${bbox.southWest.lng.toFixed(4)}° → ${bbox.northEast.lat.toFixed(4)}°, ${bbox.northEast.lng.toFixed(4)}°</div>`;
+        html += `<div class="tile-popup-events">`;
+
+        const recentEvents = tracked.events.slice(-10);
+        for (const ev of recentEvents) {
+          const time = new Date(ev.time).toLocaleTimeString("en-US", { hour12: false });
+          const color = EVENT_COLORS[ev.event] ?? "#6c8cff";
+          let meta = "";
+          if (ev.sizeBytes) meta += ` · ${(ev.sizeBytes / 1024).toFixed(1)} KB`;
+          if (ev.httpCode) meta += ` · HTTP ${ev.httpCode}`;
+          html += `<div class="tile-popup-event">
+            <span class="tile-popup-time">${time}</span>
+            <span style="color:${color};font-weight:600">${ev.event}</span>
+            <span class="tile-popup-cache">${ev.cache}</span>
+            ${meta ? `<span class="tile-popup-meta">${meta}</span>` : ""}
+          </div>`;
+        }
+
+        if (tracked.events.length > 10) {
+          html += `<div class="tile-popup-more">… and ${tracked.events.length - 10} more</div>`;
+        }
+
+        html += `</div></div>`;
+
+        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "340px" })
+          .setLngLat([centerLng, centerLat])
+          .setHTML(html)
+          .addTo(map!);
+        activePopups.push(popup);
       }
-
-      if (tracked.events.length > 10) {
-        html += `<div class="tile-popup-more">… and ${tracked.events.length - 10} more</div>`;
-      }
-
-      html += `</div></div>`;
-
-      // Remove existing popup
-      if (popup) popup.remove();
-
-      popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "340px" })
-        .setLngLat([centerLng, centerLat])
-        .setHTML(html)
-        .addTo(map!);
     });
 
     // Cursor change on hover
@@ -296,7 +326,7 @@ function fitMapToTiles(): void {
 
   const bounds = new maplibregl.LngLatBounds();
   for (const tile of trackedTiles.values()) {
-    const bbox = packedTileIdToBBox(tile.tileId);
+    const { bbox } = decodeTile(tile);
     bounds.extend([bbox.southWest.lng, bbox.southWest.lat]);
     bounds.extend([bbox.northEast.lng, bbox.northEast.lat]);
   }
@@ -309,10 +339,8 @@ function fitMapToTiles(): void {
 export function clearTiles(): void {
   trackedTiles.clear();
 
-  if (popup) {
-    popup.remove();
-    popup = null;
-  }
+  activePopups.forEach(p => p.remove());
+  activePopups = [];
 
   if (!map) return;
   const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
@@ -331,7 +359,8 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
   if (!map) return;
 
   for (const te of events) {
-    const existing = trackedTiles.get(te.tileId);
+    const key = tileKey(te.cache, te.tileId);
+    const existing = trackedTiles.get(key);
     if (existing) {
       existing.events.push({
         event: te.event,
@@ -343,8 +372,9 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
       existing.latestEvent = te.event;
       existing.addedAt = Date.now();
     } else {
-      trackedTiles.set(te.tileId, {
+      trackedTiles.set(key, {
         tileId: te.tileId,
+        cache: te.cache,
         events: [{
           event: te.event,
           cache: te.cache,
@@ -360,9 +390,9 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
 
   // Prune old tiles
   const now = Date.now();
-  for (const [id, tile] of trackedTiles) {
+  for (const [key, tile] of trackedTiles) {
     if (now - tile.addedAt > TILE_TTL_MS) {
-      trackedTiles.delete(id);
+      trackedTiles.delete(key);
     }
   }
 
@@ -370,8 +400,8 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
   if (trackedTiles.size > MAX_TILES) {
     const sorted = [...trackedTiles.entries()].sort((a, b) => a[1].addedAt - b[1].addedAt);
     const toRemove = sorted.slice(0, trackedTiles.size - MAX_TILES);
-    for (const [id] of toRemove) {
-      trackedTiles.delete(id);
+    for (const [key] of toRemove) {
+      trackedTiles.delete(key);
     }
   }
 
