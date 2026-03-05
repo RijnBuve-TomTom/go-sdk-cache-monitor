@@ -98,40 +98,70 @@ for (const c of ACTIVE_CACHES) {
     stats[c].diskConfiguredBytes - stats[c].diskUsedBytes;
 }
 
-// ── Generate tile batch ──────────────────────────────────────────────────────
+// ── Vehicle path simulation ──────────────────────────────────────────────────
 
-// Pre-compute a pool of realistic NDS.Live packed tile IDs around European cities
-const TILE_LEVEL = 13;
-const CITY_CENTERS = [
-  { lng: -3.7038, lat: 40.4168 }  // Madrid
-];
+// The vehicle follows a Lissajous-like curved path centered on Madrid.
+// The path has a period of ~600s (10 minutes) so it traces interesting loops.
+// At each fetch cycle we sample tiles ahead of the current vehicle position.
+
+const NDS_TILE_LEVEL = 14;  // Level 14 most of the time
+const PATH_CENTER = { lng: -3.7038, lat: 40.4168 };  // Madrid
+const PATH_RADIUS_LNG = 0.15;   // ~±0.15° longitude spread (~13 km)
+const PATH_RADIUS_LAT = 0.10;   // ~±0.10° latitude spread (~11 km)
+const PATH_PERIOD_S = 600;      // Full loop every 10 minutes
+const LOOKAHEAD_POINTS = 5;     // Number of points sampled ahead of vehicle
+const LOOKAHEAD_STEP_S = 8;     // Seconds between each lookahead sample
+
+// Path start time (reset on server start)
+const pathStartTime = Date.now();
+
+/**
+ * Return a position on the curved path at a given time (seconds since start).
+ * Uses a Lissajous curve: different frequencies on lng/lat for interesting loops.
+ */
+function vehiclePositionAt(tSeconds: number): { lng: number; lat: number } {
+  const phase = (2 * Math.PI * tSeconds) / PATH_PERIOD_S;
+  return {
+    lng: PATH_CENTER.lng + PATH_RADIUS_LNG * Math.sin(phase * 3 + 0.5),
+    lat: PATH_CENTER.lat + PATH_RADIUS_LAT * Math.sin(phase * 2),
+  };
+}
+
+/** Current vehicle time in seconds since path start. */
+function vehicleTimeS(): number {
+  return (Date.now() - pathStartTime) / 1000;
+}
 
 function generateNdsTileId(): number {
-  const city = pick(CITY_CENTERS);
-  // Add jitter: ~0.2 degrees around city center so tiles cluster nearby
-  const lng = city.lng + (Math.random() - 0.5) * 0.4;
-  const lat = city.lat + (Math.random() - 0.5) * 0.4;
-  return lngLatToPackedTileId({ lng, lat }, TILE_LEVEL);
+  const t = vehicleTimeS();
+  // Pick a random lookahead point ahead of the vehicle
+  const aheadS = Math.random() * LOOKAHEAD_POINTS * LOOKAHEAD_STEP_S;
+  const pos = vehiclePositionAt(t + aheadS);
+  // Small jitter to avoid exact duplicates (~0.01° ≈ 1 km)
+  const lng = pos.lng + (Math.random() - 0.5) * 0.02;
+  const lat = pos.lat + (Math.random() - 0.5) * 0.02;
+  return lngLatToPackedTileId({ lng, lat }, NDS_TILE_LEVEL);
 }
 
 function generateNavTileId(level: number): number {
-  const city = pick(CITY_CENTERS);
-  const lng = city.lng + (Math.random() - 0.5) * 0.4;
-  const lat = city.lat + (Math.random() - 0.5) * 0.4;
+  const t = vehicleTimeS();
+  const aheadS = Math.random() * LOOKAHEAD_POINTS * LOOKAHEAD_STEP_S;
+  const pos = vehiclePositionAt(t + aheadS);
+  const lng = pos.lng + (Math.random() - 0.5) * 0.02;
+  const lat = pos.lat + (Math.random() - 0.5) * 0.02;
   return lngLatToNavTileId({ lng, lat }, level);
 }
 
 function pickNonNdsLevel(): number {
   const r = Math.random();
-  if (r < 0.45) return 13;      // 45% level 13
-  if (r < 0.90) return 12;      // 45% level 12
-  if (r < 0.95) return 11;      // 5% level 11
-  if (r < 0.98) return 10;      // 3% level 10
-  return randInt(7, 9);          // 2% levels 7-9 (rare)
+  if (r < 0.65) return 14;      // 65% level 14 (most of the time)
+  if (r < 0.85) return 13;      // 20% level 13 (some)
+  if (r < 0.96) return 12;      // 11% level 12 (fewer)
+  return 11;                     // 4% level 11 (very few, nothing below)
 }
 
 function generateTileBatch(): TileBatchMessage {
-  const count = randInt(1, 8);
+  const count = randInt(1, 6);
   const events: TileEvent[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -140,10 +170,10 @@ function generateTileBatch(): TileBatchMessage {
 
     let tileId: number;
     if (cache === "ndsLive") {
-      tileId = generateNdsTileId();        // NDS.Live, always level 13
+      tileId = generateNdsTileId();        // NDS.Live, level 14
     } else {
       const level = pickNonNdsLevel();
-      tileId = generateNavTileId(level);   // NavTile, variable levels
+      tileId = generateNavTileId(level);   // NavTile, levels 11-14
     }
 
     const te: TileEvent = { cache, tileId, event };
@@ -305,11 +335,11 @@ function generateLifecycleEvent(
 
 // ── Timers ───────────────────────────────────────────────────────────────────
 
-// Tile batches every 500ms
+// Tile batches every ~2s (vehicle moves and fetches new data ahead of path)
 setInterval(() => {
   if (clients.size === 0) return;
   broadcast(generateTileBatch());
-}, 500);
+}, 2_000);
 
 // Cache stats every 10s
 setInterval(() => {
@@ -334,6 +364,8 @@ scheduleCacheEvent();
 httpServer.listen(PORT, () => {
   console.log(`[demo] Cache Monitor DEMO server on http://localhost:${PORT}`);
   console.log(`[demo] Generating fake data for caches: ${ACTIVE_CACHES.join(", ")}`);
+  console.log(`[demo] Vehicle path: Lissajous curve around Madrid, mostly level 14 tiles`);
+  console.log(`[demo] Tile batches every ~2s (vehicle lookahead fetching)`);
   console.log(`[demo] Open the Vite dev server (default http://localhost:5173) in your browser`);
 
   // Broadcast lifecycle "started" event once the server is ready

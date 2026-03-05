@@ -16,7 +16,7 @@ import type {
   ServerStatus,
   ProtocolVersion,
 } from "../shared/types";
-import { initMap, addTileEventsToMap, replayTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled } from "./tile-map";
+import { initMap, addTileEventsToMap, replayTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled, toggleLevelFilter, onLevelFilterChange } from "./tile-map";
 import { EventStore } from "./event-store";
 import { TimeCursor } from "./time-cursor";
 import { TimelineSlider } from "./timeline-slider";
@@ -786,6 +786,24 @@ $menuClearKey.addEventListener("click", () => {
 $goLiveBtn.addEventListener("click", () => {
   timeCursor.goLive(Date.now());
   timelineSlider.updatePosition();
+});
+
+// ── Level filter buttons ─────────────────────────────────────────────────────
+
+const $levelButtons = document.querySelectorAll<HTMLButtonElement>(".level-btn");
+
+for (const btn of $levelButtons) {
+  btn.addEventListener("click", () => {
+    const label = btn.dataset.level!;
+    toggleLevelFilter(label);
+  });
+}
+
+onLevelFilterChange((enabled) => {
+  for (const btn of $levelButtons) {
+    const label = btn.dataset.level!;
+    btn.classList.toggle("active", enabled.has(label));
+  }
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────

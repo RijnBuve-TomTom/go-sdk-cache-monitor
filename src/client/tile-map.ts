@@ -75,6 +75,65 @@ const TILE_TTL_MS = 60_000; // tiles fade after 60s
 
 const trackedTiles: Map<string, TrackedTile> = new Map();
 
+// ── Level filter state (map-only) ────────────────────────────────────────────
+
+/** Labels for the level filter buttons: "<=10", "10" .. "14", ">=15" */
+export const LEVEL_FILTER_LABELS = ["≤10", "10", "11", "12", "13", "14", "≥15"] as const;
+
+/**
+ * Set of enabled level-filter labels.
+ * When empty, all tiles are shown (no filtering).
+ */
+const enabledLevels: Set<string> = new Set();
+
+/** Callback invoked whenever the level filter changes so the UI can update button states. */
+let levelFilterChangeCallback: ((enabled: Set<string>) => void) | null = null;
+
+export function onLevelFilterChange(cb: (enabled: Set<string>) => void): void {
+  levelFilterChangeCallback = cb;
+}
+
+export function toggleLevelFilter(label: string): void {
+  if (enabledLevels.has(label)) {
+    enabledLevels.delete(label);
+  } else {
+    enabledLevels.add(label);
+  }
+  levelFilterChangeCallback?.(enabledLevels);
+  refreshMapSources();
+}
+
+export function isLevelFilterActive(label: string): boolean {
+  return enabledLevels.has(label);
+}
+
+/** Check whether a tile's level passes the current level filter. */
+function passesLevelFilter(level: number): boolean {
+  // If no filter buttons are active, show everything
+  if (enabledLevels.size === 0) return true;
+
+  if (level < 10 && enabledLevels.has("≤10")) return true;
+  if (level === 10 && (enabledLevels.has("10") || enabledLevels.has("≤10"))) return true;
+  if (level >= 11 && level <= 14 && enabledLevels.has(String(level))) return true;
+  if (level > 15 && enabledLevels.has("≥15")) return true;
+  if (level === 15 && (enabledLevels.has("≥15"))) return true;
+
+  return false;
+}
+
+/** Refresh map GeoJSON sources to reflect current level filter. */
+function refreshMapSources(): void {
+  if (!map) return;
+  const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (source) {
+    source.setData(buildFeatureCollection());
+  }
+  const crossSource = map.getSource(CROSS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  if (crossSource) {
+    crossSource.setData(buildCrossFeatureCollection());
+  }
+}
+
 function tileKey(cache: string, tileId: number): string {
   return `${cache}:${tileId}`;
 }
@@ -127,7 +186,9 @@ function tileToFeature(tile: TrackedTile): GeoJSON.Feature<GeoJSON.Polygon> {
 function buildFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
   return {
     type: "FeatureCollection",
-    features: [...trackedTiles.values()].map(tileToFeature),
+    features: [...trackedTiles.values()]
+      .filter(tile => passesLevelFilter(decodeTile(tile).level))
+      .map(tileToFeature),
   };
 }
 
@@ -141,7 +202,8 @@ function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiL
   for (const tile of trackedTiles.values()) {
     if (tile.events.length <= 1) continue;
 
-    const { bbox } = decodeTile(tile);
+    const { bbox, level } = decodeTile(tile);
+    if (!passesLevelFilter(level)) continue;
     const color = EVENT_COLORS[tile.latestEvent] ?? "#6c8cff";
 
     features.push({
@@ -341,6 +403,9 @@ export function initMap(): void {
         if (!tracked) continue;
 
         const { bbox, level } = decodeTile(tracked);
+
+        // Respect level filter for dialogs
+        if (!passesLevelFilter(level)) continue;
 
         // Build dialog body HTML
         let body = `<div class="tile-popup-header">Tile #${tracked.tileId} <span class="tile-popup-level">L${level}</span> <span class="tile-popup-cache">${tracked.cache}</span></div>`;
