@@ -70,8 +70,7 @@ interface TrackedTile {
   addedAt: number;
 }
 
-const MAX_TILES = 500;
-const TILE_TTL_MS = 60_000; // tiles fade after 60s
+const MAX_TILES = 100_000;
 
 const trackedTiles: Map<string, TrackedTile> = new Map();
 
@@ -578,14 +577,6 @@ export function addTileEventsToMap(events: TileEvent[], time: number): void {
         latestEvent: te.event,
         addedAt: Date.now(),
       });
-    }
-  }
-
-  // Prune old tiles
-  const now = Date.now();
-  for (const [key, tile] of trackedTiles) {
-    if (now - tile.addedAt > TILE_TTL_MS) {
-      trackedTiles.delete(key);
     }
   }
 

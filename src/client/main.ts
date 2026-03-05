@@ -40,8 +40,8 @@ const $toastContainer = document.getElementById("toast-container")!;
 const $menuBtn = document.getElementById("menu-btn")!;
 const $menuDropdown = document.getElementById("menu-dropdown")!;
 const $menuClearKey = document.getElementById("menu-clear-key")!;
-const $menuClearTiles = document.getElementById("menu-clear-tiles")!;
 const $autoZoomToggle = document.getElementById("auto-zoom-toggle")!;
+const $clearMapBtn = document.getElementById("clear-map-btn")!;
 
 const $timelineTrack = document.getElementById("timeline-slider")!.querySelector(".timeline-track")! as HTMLElement;
 const $timelineThumb = document.getElementById("timeline-thumb")!;
@@ -770,9 +770,8 @@ $autoZoomToggle.addEventListener("click", () => {
   $autoZoomToggle.classList.toggle("active", enabled);
 });
 
-$menuClearTiles.addEventListener("click", () => {
+$clearMapBtn.addEventListener("click", () => {
   clearTiles();
-  $menuDropdown.classList.add("hidden");
   showToast("Tile map cleared", "info");
 });
 
