@@ -82,14 +82,18 @@ export const SOURCE_FILTER_LABELS: readonly SourceFilterLabel[] = ["NDS.Live", "
 
 /**
  * Set of enabled source-filter labels.
- * When empty, all tiles are shown (no filtering).
+ * When empty, no tiles are shown.
  */
-const enabledSources: Set<string> = new Set();
+const enabledSources: Set<string> = new Set(SOURCE_FILTER_LABELS);
 
 let sourceFilterChangeCallback: ((enabled: Set<string>) => void) | null = null;
 
 export function onSourceFilterChange(cb: (enabled: Set<string>) => void): void {
   sourceFilterChangeCallback = cb;
+}
+
+export function getEnabledSources(): ReadonlySet<string> {
+  return enabledSources;
 }
 
 export function toggleSourceFilter(label: string): void {
@@ -104,7 +108,7 @@ export function toggleSourceFilter(label: string): void {
 
 /** Check whether a tile's cache passes the current source filter. */
 function passesSourceFilter(cache: string): boolean {
-  if (enabledSources.size === 0) return true;
+  if (enabledSources.size === 0) return false;
   const isNdsLive = cache === "ndsLive";
   if (isNdsLive && enabledSources.has("NDS.Live")) return true;
   if (!isNdsLive && enabledSources.has("MapVis")) return true;
@@ -118,15 +122,19 @@ export const LEVEL_FILTER_LABELS = ["≤10", "10", "11", "12", "13", "14", "≥1
 
 /**
  * Set of enabled level-filter labels.
- * When empty, all tiles are shown (no filtering).
+ * When empty, no tiles are shown.
  */
-const enabledLevels: Set<string> = new Set();
+const enabledLevels: Set<string> = new Set(["11", "12", "13", "14", "≥15"]);
 
 /** Callback invoked whenever the level filter changes so the UI can update button states. */
 let levelFilterChangeCallback: ((enabled: Set<string>) => void) | null = null;
 
 export function onLevelFilterChange(cb: (enabled: Set<string>) => void): void {
   levelFilterChangeCallback = cb;
+}
+
+export function getEnabledLevels(): ReadonlySet<string> {
+  return enabledLevels;
 }
 
 export function toggleLevelFilter(label: string): void {
@@ -145,8 +153,8 @@ export function isLevelFilterActive(label: string): boolean {
 
 /** Check whether a tile's level passes the current level filter. */
 function passesLevelFilter(level: number): boolean {
-  // If no filter buttons are active, show everything
-  if (enabledLevels.size === 0) return true;
+  // If no filter buttons are active, hide everything
+  if (enabledLevels.size === 0) return false;
 
   if (level < 10 && enabledLevels.has("≤10")) return true;
   if (level === 10 && (enabledLevels.has("10") || enabledLevels.has("≤10"))) return true;
