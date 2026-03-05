@@ -68,6 +68,8 @@ const rateHistory: Record<string, number[]> = {
   evict: [],
   other: [],
 };
+// Absolute-time labels for the rate chart (HH:MM:SS)
+const rateLabels: string[] = [];
 
 // Hit ratio history for chart
 const hitRatioHistory: Map<CacheType, number[]> = new Map();
@@ -153,7 +155,7 @@ const rateChart = new Chart(
   {
     type: "line",
     data: {
-      labels: Array.from({ length: RATE_HISTORY_LEN }, (_, i) => `${RATE_HISTORY_LEN - i}s`),
+      labels: rateLabels,
       datasets: Object.entries(chartColors).map(([key, color]) => ({
         label: key,
         data: [],
@@ -179,7 +181,12 @@ const rateChart = new Chart(
           display: true,
           beginAtZero: true,
           grid: { color: "#2d314830" },
-          ticks: { color: "#8b90a5", font: { size: 10 } },
+          ticks: {
+            color: "#8b90a5",
+            font: { size: 10 },
+            stepSize: 1,
+            callback: (v) => Number.isInteger(Number(v)) ? String(v) : "",
+          },
         },
       },
       plugins: {
@@ -265,7 +272,11 @@ function rebuildMapFromStore(cutoffMs: number): void {
 }
 
 setInterval(() => {
-  // Push current second's buckets into history
+  // Push current second's buckets into history and update time labels
+  const now = new Date();
+  rateLabels.push(now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  if (rateLabels.length > RATE_HISTORY_LEN) rateLabels.shift();
+
   for (const key of Object.keys(rateHistory)) {
     rateHistory[key].push(currentSecondBuckets[key]);
     if (rateHistory[key].length > RATE_HISTORY_LEN)
@@ -274,6 +285,7 @@ setInterval(() => {
   }
 
   // Update rate chart
+  (rateChart.data.labels as string[]) = [...rateLabels];
   for (let i = 0; i < rateChart.data.datasets.length; i++) {
     const key = rateChart.data.datasets[i].label!;
     (rateChart.data.datasets[i].data as number[]) = [...rateHistory[key]];
