@@ -877,6 +877,7 @@ body {
   border-radius: 3px;
   border: 1px solid var(--border);
   cursor: pointer;
+  overflow: visible;
 }
 
 .timeline-elapsed {
@@ -971,6 +972,54 @@ body {
 
 .timeline-go-live.hidden {
   display: none;
+}
+
+/* ── Timeline event markers ──────────────────────────────────────────────── */
+
+.timeline-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: calc(100% + 8px);
+  border-radius: 1px;
+  pointer-events: auto;
+  cursor: help;
+  z-index: 5;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+
+.timeline-marker:hover {
+  opacity: 1;
+}
+
+.timeline-marker::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.timeline-marker-flush {
+  background: var(--evt-flush);
+}
+
+.timeline-marker-flush::before {
+  background: var(--evt-flush);
+  box-shadow: 0 0 6px var(--evt-flush);
+}
+
+.timeline-marker-corruption {
+  background: var(--evt-corruption);
+}
+
+.timeline-marker-corruption::before {
+  background: var(--evt-corruption);
+  box-shadow: 0 0 6px var(--evt-corruption);
 }
 
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */

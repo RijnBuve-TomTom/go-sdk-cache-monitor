@@ -525,9 +525,13 @@ function handleCacheEvent(msg: CacheEventMessage): void {
   if (msg.event === "flush") {
     const tiles = msg.tilesFlushed ? ` — ${fmtNum(msg.tilesFlushed)} tiles` : "";
     const bytes = msg.bytesFlushed ? `, ${fmtBytes(msg.bytesFlushed)}` : "";
+    const label = `Flush: ${msg.cache}${desc}${tiles}${bytes}`;
     showToast(`⚠️ FLUSH: ${msg.cache}${desc}${tiles}${bytes}`, "flush");
+    timelineSlider.addMarker(msg.time, "flush", label);
   } else if (msg.event === "corruption") {
+    const label = `Corruption: ${msg.cache}${desc}`;
     showToast(`🚨 CORRUPTION: ${msg.cache}${desc}`, "corruption");
+    timelineSlider.addMarker(msg.time, "corruption", label);
   } else {
     showToast(`ℹ️ ${msg.event}: ${msg.cache}${desc}`, "info");
   }

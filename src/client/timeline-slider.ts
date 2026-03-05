@@ -8,6 +8,13 @@ export interface TimelineSliderElements {
   labelCursor: HTMLElement;
 }
 
+export interface TimelineMarker {
+  time: number;
+  type: "flush" | "corruption";
+  label: string;
+  el: HTMLElement;
+}
+
 /**
  * Manages the timeline slider UI: drag thumb, update position,
  * and communicate with TimeCursor.
@@ -18,6 +25,7 @@ export class TimelineSlider {
   private dragging = false;
   private timeRangeMs = 60_000; // visible window = 60s
   private latestNow = Date.now();
+  private markers: TimelineMarker[] = [];
 
   constructor(els: TimelineSliderElements, cursor: TimeCursor) {
     this.els = els;
@@ -29,8 +37,46 @@ export class TimelineSlider {
   /** Call this on every animation frame or 1s tick to keep "now" advancing. */
   tick(now: number): void {
     this.latestNow = now;
+    this.pruneMarkers();
+    this.updateMarkerPositions();
     if (this.cursor.isLive()) {
       this.updatePosition();
+    }
+  }
+
+  /** Add an event marker (flush or corruption) to the timeline. */
+  addMarker(time: number, type: "flush" | "corruption", label: string): void {
+    const el = document.createElement("div");
+    el.className = `timeline-marker timeline-marker-${type}`;
+    el.title = label;
+    this.els.track.appendChild(el);
+    this.markers.push({ time, type, label, el });
+    this.updateMarkerPositions();
+  }
+
+  /** Remove markers that have scrolled out of the visible time window. */
+  private pruneMarkers(): void {
+    const rangeStart = this.latestNow - this.timeRangeMs;
+    this.markers = this.markers.filter((m) => {
+      if (m.time < rangeStart) {
+        m.el.remove();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /** Reposition all marker elements based on their timestamp. */
+  private updateMarkerPositions(): void {
+    const rangeStart = this.latestNow - this.timeRangeMs;
+    const rangeEnd = this.latestNow;
+    const span = rangeEnd - rangeStart;
+    if (span <= 0) return;
+
+    for (const m of this.markers) {
+      let frac = (m.time - rangeStart) / span;
+      frac = Math.max(0, Math.min(1, frac));
+      m.el.style.left = `${(frac * 100).toFixed(2)}%`;
     }
   }
 
