@@ -18,9 +18,14 @@ export interface AdbBridgeEvents {
 export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
   private proc: ChildProcess | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private devicePollTimer: ReturnType<typeof setTimeout> | null = null;
+  private deviceConnected = false;
   private stopped = false;
 
-  constructor(private readonly adbPath = "adb") {
+  constructor(
+    private readonly adbPath = "adb",
+    private readonly devicePollIntervalMs = 2000
+  ) {
     super();
   }
 
@@ -32,10 +37,13 @@ export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
   stop(): void {
     this.stopped = true;
     this.clearReconnect();
+    this.clearDevicePolling();
+    this.deviceConnected = false;
     this.killProcess();
   }
 
   private connect(): void {
+    this.clearDevicePolling();
     this.killProcess();
 
     console.log("[adb] Spawning: adb logcat -s CacheMonitor:D CacheMonitorIntegration:D");
@@ -86,11 +94,24 @@ export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
       const lines = output
         .split("\n")
         .filter((l) => l.trim() && !l.startsWith("List of"));
+
       if (lines.length > 0) {
         const deviceId = lines[0].split(/\s+/)[0];
-        console.log("[adb] Device found:", deviceId);
-        this.emit("connected", deviceId);
+        const state = lines[0].split(/\s+/)[1];
+
+        if (state !== "unauthorized") {
+          console.log("[adb] Device found:", deviceId);
+          this.deviceConnected = true;
+          this.emit("connected", deviceId);
+        }
+      } else {
+        console.log("[adb] No device found");
+        this.deviceConnected = false;
+        this.emit("disconnected");
       }
+
+      // Start continuous polling
+      this.startDevicePolling();
     });
   }
 
@@ -106,6 +127,73 @@ export class AdbBridge extends EventEmitter<AdbBridgeEvents> {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+  }
+
+  private clearDevicePolling(): void {
+    if (this.devicePollTimer) {
+      clearTimeout(this.devicePollTimer);
+      this.devicePollTimer = null;
+    }
+  }
+
+  private startDevicePolling(): void {
+    if (this.stopped) return;
+
+    this.devicePollTimer = setTimeout(() => {
+      this.pollDevice();
+    }, this.devicePollIntervalMs);
+  }
+
+  private async pollDevice(): Promise<void> {
+    if (this.stopped) return;
+
+    const check = spawn(this.adbPath, ["devices", "-l"]);
+    let output = "";
+
+    check.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+
+    check.on("close", () => {
+      const lines = output
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("List of"));
+
+      const hasDevice = lines.length > 0;
+      const wasConnected = this.deviceConnected;
+
+      // Warn about multiple devices
+      if (lines.length > 1) {
+        console.warn(`[adb] Multiple devices detected (${lines.length}), using first one`);
+      }
+
+      if (hasDevice && !wasConnected) {
+        // Device just connected
+        const deviceId = lines[0].split(/\s+/)[0];
+        const state = lines[0].split(/\s+/)[1];
+
+        if (state === "unauthorized") {
+          console.warn(`[adb] Device ${deviceId} is unauthorized - please check device for authorization prompt`);
+        } else {
+          console.log("[adb] Device connected:", deviceId);
+          this.deviceConnected = true;
+          this.emit("connected", deviceId);
+        }
+      } else if (!hasDevice && wasConnected) {
+        // Device just disconnected
+        console.log("[adb] Device disconnected");
+        this.deviceConnected = false;
+        this.emit("disconnected");
+      }
+
+      // Schedule next poll
+      this.startDevicePolling();
+    });
+
+    check.on("error", (err) => {
+      console.error("[adb] Device poll error:", err.message);
+      this.startDevicePolling(); // Continue polling even on error
+    });
   }
 
   private killProcess(): void {

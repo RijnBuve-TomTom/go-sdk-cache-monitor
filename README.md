@@ -14,6 +14,7 @@ A real-time visual cache monitor for Android navigation apps. Connects via ADB t
 - **Floating stats window** — draggable, minimizable summary table with aggregated metrics
 - **Toast alerts** — immediate notifications for flush and corruption events
 - **Auto-reconnect** — both ADB and WebSocket connections auto-reconnect on failure
+- **Device hot-plugging** — automatically detects when devices are connected or disconnected
 - **Demo mode** — built-in fake data generator for UI development without a device
 
 ## Architecture
@@ -90,6 +91,39 @@ npm run dev
 ```
 
 Open **http://localhost:5173** in your browser.
+
+## Configuration
+
+### Environment Variables
+
+The server can be configured using environment variables:
+
+- **`ADB_PATH`** — Custom path to the `adb` binary (default: searches PATH)
+- **`ADB_POLL_INTERVAL_MS`** — Device polling interval in milliseconds (default: 2000)
+- **`PORT`** — Server port (default: 3001)
+
+**Example usage:**
+
+```bash
+# Use custom ADB path
+ADB_PATH=/usr/local/bin/adb npm run dev:server
+
+# Poll for devices every second
+ADB_POLL_INTERVAL_MS=1000 npm run dev:server
+
+# Combine multiple options
+ADB_PATH=/custom/adb ADB_POLL_INTERVAL_MS=5000 PORT=8080 npm run dev:server
+```
+
+### Device Hot-Plugging
+
+The server continuously monitors for connected devices every 2 seconds (configurable). This means you can:
+
+- **Hot-plug devices** without restarting the server
+- See **real-time connection status** in the dashboard
+- Check **terminal logs** for device ID and connection events
+
+**Note:** If multiple devices are connected, the first device (as listed by `adb devices`) is used. To target a specific device, ensure it's the only one connected.
 
 ## Message Format
 

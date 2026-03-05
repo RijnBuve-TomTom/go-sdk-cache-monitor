@@ -83,8 +83,16 @@ function broadcast(data: WsEnvelope | ServerStatus): void {
 
 // ── ADB Bridge ───────────────────────────────────────────────────────────────
 
+const DEVICE_POLL_INTERVAL_MS = parseInt(
+  process.env.ADB_POLL_INTERVAL_MS ?? "2000",
+  10
+);
+
 let currentDeviceId: string | null = null;
-const adb = new AdbBridge();
+const adb = new AdbBridge(
+  process.env.ADB_PATH,
+  DEVICE_POLL_INTERVAL_MS
+);
 
 adb.on("message", (msg) => {
   const envelope: WsEnvelope = { source: "adb", message: msg };
