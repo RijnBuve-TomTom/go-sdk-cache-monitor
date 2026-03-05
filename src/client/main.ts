@@ -71,9 +71,6 @@ const rateHistory: Record<string, number[]> = {
 // Absolute-time labels for the rate chart (HH:MM:SS)
 const rateLabels: string[] = [];
 
-// Hit ratio history for chart
-const hitRatioHistory: Map<CacheType, number[]> = new Map();
-
 // ── Time machine state ──────────────────────────────────────────────────────
 
 const eventStore = new EventStore();
@@ -139,17 +136,6 @@ const chartColors: Record<string, string> = {
   other: "#a78bfa",
 };
 
-const cacheChartColors = [
-  "#22d3ee",
-  "#34d399",
-  "#6c8cff",
-  "#fbbf24",
-  "#f472b6",
-  "#a78bfa",
-  "#fb923c",
-  "#ef4444",
-];
-
 const rateChart = new Chart(
   document.getElementById("rate-chart") as HTMLCanvasElement,
   {
@@ -193,51 +179,6 @@ const rateChart = new Chart(
         legend: {
           labels: { color: "#8b90a5", boxWidth: 12, font: { size: 10 } },
         },
-      },
-    },
-  },
-);
-
-const hitRatioChart = new Chart(
-  document.getElementById("hit-ratio-chart") as HTMLCanvasElement,
-  {
-    type: "bar",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: "Hit Ratio",
-          data: [],
-          backgroundColor: [],
-          borderColor: [],
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      animation: { duration: 300 },
-      scales: {
-        x: {
-          min: 0,
-          max: 1,
-          grid: { color: "#2d314830" },
-          ticks: {
-            color: "#8b90a5",
-            callback: (v) => `${(Number(v) * 100).toFixed(0)}%`,
-            font: { size: 10 },
-          },
-        },
-        y: {
-          grid: { display: false },
-          ticks: { color: "#22d3ee", font: { size: 10 } },
-        },
-      },
-      plugins: {
-        legend: { display: false },
       },
     },
   },
@@ -388,25 +329,6 @@ function renderCacheStats(): void {
     $statsContainer.appendChild(card);
   }
 
-  // Update hit ratio chart
-  const labels: string[] = [];
-  const data: number[] = [];
-  const bgColors: string[] = [];
-  const bdColors: string[] = [];
-  let i = 0;
-  for (const [cache, s] of entries) {
-    labels.push(cache);
-    data.push(s.hitRatio);
-    const c = cacheChartColors[i % cacheChartColors.length];
-    bgColors.push(c + "60");
-    bdColors.push(c);
-    i++;
-  }
-  (hitRatioChart.data.labels as string[]) = labels;
-  (hitRatioChart.data.datasets[0].data as number[]) = data;
-  (hitRatioChart.data.datasets[0] as any).backgroundColor = bgColors;
-  (hitRatioChart.data.datasets[0] as any).borderColor = bdColors;
-  hitRatioChart.update();
 }
 
 // ── Floating detailed stats ──────────────────────────────────────────────────

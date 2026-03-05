@@ -8,7 +8,6 @@ A real-time visual cache monitor for Android navigation apps. Connects via ADB t
 
 - **Live tile event feed** — real-time scrolling list of hits, misses, downloads, evictions, and more
 - **Event rate chart** — line chart showing events/second by type over the last 60 seconds
-- **Hit ratio chart** — horizontal bar chart showing cache hit ratios per cache type
 - **Cache statistics cards** — detailed per-cache stats with disk usage bars
 - **Floating stats window** — draggable, minimizable summary table with aggregated metrics
 - **Toast alerts** — immediate notifications for flush and corruption events
