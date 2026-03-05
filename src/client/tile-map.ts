@@ -462,7 +462,6 @@ export function initMap(): void {
           const color = EVENT_COLORS[ev.event] ?? "#6c8cff";
           let meta = "";
           if (ev.sizeBytes) meta += ` · ${(ev.sizeBytes / 1024).toFixed(1)} KB`;
-          if (ev.httpCode) meta += ` · HTTP ${ev.httpCode}`;
           body += `<div class="tile-popup-event">
             <span class="tile-popup-time">${time}</span>
             <span style="color:${color};font-weight:600">${ev.event}</span>
