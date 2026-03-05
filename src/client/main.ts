@@ -59,8 +59,7 @@ let currentSecondCount = 0;
 // Cache stats (latest snapshot from cacheStats messages)
 const latestStats: Map<CacheType, CacheStatistics> = new Map();
 
-// Event rate history for chart (per event type, last 60 data points)
-const RATE_HISTORY_LEN = 60;
+// Event rate history for chart (per event type, grows since capture start)
 const rateHistory: Record<string, number[]> = {
   hit: [],
   miss: [],
@@ -74,7 +73,7 @@ const rateLabels: string[] = [];
 // ── Time machine state ──────────────────────────────────────────────────────
 
 const eventStore = new EventStore();
-const EVENT_STORE_MAX_AGE_MS = 120_000; // keep 2 minutes of history
+let captureStartTime: number | null = null; // set on first tile batch
 
 const timeCursor = new TimeCursor((state) => {
   $goLiveBtn.classList.toggle("hidden", state.isLive);
@@ -212,16 +211,16 @@ function rebuildMapFromStore(cutoffMs: number): void {
   replayTileEventsToMap(batches);
 }
 
+const $timelineLabelStart = document.getElementById("timeline-label-start")!;
+const $chartTitle = document.querySelector("#charts h2")!;
+
 setInterval(() => {
   // Push current second's buckets into history and update time labels
   const now = new Date();
   rateLabels.push(now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-  if (rateLabels.length > RATE_HISTORY_LEN) rateLabels.shift();
 
   for (const key of Object.keys(rateHistory)) {
     rateHistory[key].push(currentSecondBuckets[key]);
-    if (rateHistory[key].length > RATE_HISTORY_LEN)
-      rateHistory[key].shift();
     currentSecondBuckets[key] = 0;
   }
 
@@ -241,11 +240,28 @@ setInterval(() => {
   $evtPerSec.textContent = `${avg.toFixed(1)} evt/s`;
   currentSecondCount = 0;
 
-  // Prune old events from the store
-  eventStore.prune(Date.now(), EVENT_STORE_MAX_AGE_MS);
+  // Update timeline slider range to cover entire capture duration
+  const nowMs = Date.now();
+  if (captureStartTime != null) {
+    const elapsed = nowMs - captureStartTime;
+    timelineSlider.setTimeRange(elapsed);
+
+    // Update the start label to show how far back we can go
+    const elapsedSec = Math.round(elapsed / 1000);
+    if (elapsedSec < 120) {
+      $timelineLabelStart.textContent = `-${elapsedSec}s`;
+    } else if (elapsedSec < 7200) {
+      $timelineLabelStart.textContent = `-${(elapsedSec / 60).toFixed(1)}m`;
+    } else {
+      $timelineLabelStart.textContent = `-${(elapsedSec / 3600).toFixed(1)}h`;
+    }
+
+    // Update chart title with duration
+    $chartTitle.innerHTML = `Event Rate <small>(${$timelineLabelStart.textContent} to now)</small>`;
+  }
 
   // Tick the timeline slider
-  timelineSlider.tick(Date.now());
+  timelineSlider.tick(nowMs);
 }, 1000);
 
 // ── Tile feed ────────────────────────────────────────────────────────────────
@@ -433,6 +449,11 @@ function handleTileBatch(msg: TileBatchMessage): void {
     currentSecondBuckets[classifyEvent(te.event)]++;
     currentSecondCount++;
     totalTileEvents++;
+  }
+
+  // Track capture start time from the first tile batch
+  if (captureStartTime == null) {
+    captureStartTime = msg.time;
   }
 
   // Always store for replay

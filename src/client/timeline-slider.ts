@@ -56,14 +56,7 @@ export class TimelineSlider {
 
   /** Remove markers that have scrolled out of the visible time window. */
   private pruneMarkers(): void {
-    const rangeStart = this.latestNow - this.timeRangeMs;
-    this.markers = this.markers.filter((m) => {
-      if (m.time < rangeStart) {
-        m.el.remove();
-        return false;
-      }
-      return true;
-    });
+    // Keep all markers — the timeline covers the entire capture duration
   }
 
   /** Reposition all marker elements based on their timestamp. */
