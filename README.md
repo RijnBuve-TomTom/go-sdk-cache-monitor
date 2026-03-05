@@ -1,6 +1,8 @@
-# 🗺️ Cache Monitor
+# 🗺️ GO SDK Cache Monitor
 
 A real-time visual cache monitor for Android navigation apps. Connects via ADB to `logcat`, parses `CacheMonitor` tagged messages, and displays tile events, cache statistics, and alerts in a live dashboard.
+
+**Important:** The CachGO SDK  Monitor requires a version of GO SDK that implements sending tile event data to `logcat`. 
 
 ![Architecture: Node.js backend + Browser frontend](https://img.shields.io/badge/Stack-Node.js%20%2B%20Vite%20%2B%20Chart.js-blue)
 
