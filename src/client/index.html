@@ -35,22 +35,27 @@
   <!-- ── Top half: Map ─────────────────────────────────────────────────── -->
   <section id="map-container">
     <div id="map"></div>
-    <div id="source-filter" class="source-filter">
-      <span class="source-filter-title">Source</span>
-      <button class="source-btn" data-source="NDS.Live">NDS.Live</button>
-      <button class="source-btn" data-source="MapVis">MapVis</button>
+    <div class="map-filter-stack">
+      <div id="source-filter" class="source-filter">
+        <span class="source-filter-title">Source</span>
+        <button class="source-btn" data-source="NDS.Live">NDS.Live</button>
+        <button class="source-btn" data-source="MapVis">MapVis</button>
+      </div>
+      <div id="level-filter" class="level-filter">
+        <span class="level-filter-title">Level</span>
+        <button class="level-btn" data-level="≤10">≤10</button>
+        <button class="level-btn" data-level="10">10</button>
+        <button class="level-btn" data-level="11">11</button>
+        <button class="level-btn" data-level="12">12</button>
+        <button class="level-btn" data-level="13">13</button>
+        <button class="level-btn" data-level="14">14</button>
+        <button class="level-btn" data-level="≥15">≥15</button>
+      </div>
+      <div id="display-filter" class="display-filter">
+        <span class="display-filter-title">Display</span>
+        <button id="auto-zoom-toggle" class="display-btn active" title="Auto-zoom to tiles">Auto-zoom</button>
+      </div>
     </div>
-    <div id="level-filter" class="level-filter">
-      <span class="level-filter-title">Level</span>
-      <button class="level-btn" data-level="≤10">≤10</button>
-      <button class="level-btn" data-level="10">10</button>
-      <button class="level-btn" data-level="11">11</button>
-      <button class="level-btn" data-level="12">12</button>
-      <button class="level-btn" data-level="13">13</button>
-      <button class="level-btn" data-level="14">14</button>
-      <button class="level-btn" data-level="≥15">≥15</button>
-    </div>
-    <button id="auto-zoom-toggle" class="auto-zoom-toggle active" title="Auto-zoom to tiles">🎯 Auto-zoom</button>
     <div id="map-legend" class="map-legend">
       <span class="legend-title">Tile Events</span>
       <span class="legend-item"><span class="legend-swatch" data-event="hit"></span>Hit</span>
