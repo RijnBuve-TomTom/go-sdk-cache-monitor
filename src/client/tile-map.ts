@@ -116,14 +116,14 @@ function passesSourceFilter(cache: string): boolean {
 
 // ── Level filter state (map-only) ────────────────────────────────────────────
 
-/** Labels for the level filter buttons: "<=10", "10" .. "14", ">=15" */
-export const LEVEL_FILTER_LABELS = ["≤10", "10", "11", "12", "13", "14", "≥15"] as const;
+/** Labels for the level filter buttons: "<=10", "11" .. "13", ">=14" */
+export const LEVEL_FILTER_LABELS = ["≤10", "11", "12", "13", "≥14"] as const;
 
 /**
  * Set of enabled level-filter labels.
  * When empty, no tiles are shown.
  */
-const enabledLevels: Set<string> = new Set(["11", "12", "13", "14", "≥15"]);
+const enabledLevels: Set<string> = new Set(["11", "12", "13", "≥14"]);
 
 /** Callback invoked whenever the level filter changes so the UI can update button states. */
 let levelFilterChangeCallback: ((enabled: Set<string>) => void) | null = null;
@@ -155,11 +155,9 @@ function passesLevelFilter(level: number): boolean {
   // If no filter buttons are active, hide everything
   if (enabledLevels.size === 0) return false;
 
-  if (level < 10 && enabledLevels.has("≤10")) return true;
-  if (level === 10 && (enabledLevels.has("10") || enabledLevels.has("≤10"))) return true;
-  if (level >= 11 && level <= 14 && enabledLevels.has(String(level))) return true;
-  if (level > 15 && enabledLevels.has("≥15")) return true;
-  if (level === 15 && (enabledLevels.has("≥15"))) return true;
+  if (level <= 10 && enabledLevels.has("≤10")) return true;
+  if (level >= 11 && level <= 13 && enabledLevels.has(String(level))) return true;
+  if (level >= 14 && enabledLevels.has("≥14")) return true;
 
   return false;
 }
