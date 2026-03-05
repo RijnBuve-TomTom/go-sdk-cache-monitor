@@ -307,7 +307,6 @@ function addFeedItem(te: TileEvent, time: number): void {
   let meta = "";
   if (te.sizeBytes) meta += fmtBytes(te.sizeBytes);
   if (te.ageSeconds != null) meta += (meta ? " · " : "") + fmtAge(te.ageSeconds);
-  if (te.httpCode) meta += (meta ? " · " : "") + `HTTP ${te.httpCode}`;
 
   el.innerHTML = `
     <span class="feed-time">${timeStr}</span>

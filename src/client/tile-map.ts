@@ -176,6 +176,9 @@ function refreshMapSources(): void {
   if (crossSource) {
     crossSource.setData(buildCrossFeatureCollection());
   }
+  if (autoZoomEnabled) {
+    fitMapToTiles();
+  }
 }
 
 function tileKey(cache: string, tileId: number): string {
@@ -511,12 +514,17 @@ function fitMapToTiles(): void {
   if (!map || trackedTiles.size === 0) return;
 
   const bounds = new maplibregl.LngLatBounds();
+  let hasVisibleTile = false;
   for (const tile of trackedTiles.values()) {
-    const { bbox } = decodeTile(tile);
+    if (!passesSourceFilter(tile.cache)) continue;
+    const { bbox, level } = decodeTile(tile);
+    if (!passesLevelFilter(level)) continue;
     bounds.extend([bbox.southWest.lng, bbox.southWest.lat]);
     bounds.extend([bbox.northEast.lng, bbox.northEast.lat]);
+    hasVisibleTile = true;
   }
 
+  if (!hasVisibleTile) return;
   map.fitBounds(bounds, { padding: 40, maxZoom: 15, duration: 500 });
 }
 
