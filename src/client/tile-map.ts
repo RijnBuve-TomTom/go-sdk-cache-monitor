@@ -2,7 +2,7 @@ import maplibregl from "maplibre-gl";
 import type { TileEvent, TileEventType } from "../shared/types";
 import { packedTileIdToBBox, packedTileIdToLevel } from "../shared/nds";
 import type { TileBoundingBox } from "../shared/nds";
-import { navTileIdToBBox, navTileIdToLevel } from "../shared/navtile";
+import { mapLibreTileIdToBBox, mapLibreTileIdToLevel } from "../shared/mapLibreTile";
 
 // ── API key management (stored in browser localStorage) ──────────────────────
 
@@ -75,6 +75,42 @@ const TILE_TTL_MS = 60_000; // tiles fade after 60s
 
 const trackedTiles: Map<string, TrackedTile> = new Map();
 
+// ── Source filter state (NDS.Live vs MapVis) ─────────────────────────────────
+
+export type SourceFilterLabel = "NDS.Live" | "MapVis";
+export const SOURCE_FILTER_LABELS: readonly SourceFilterLabel[] = ["NDS.Live", "MapVis"] as const;
+
+/**
+ * Set of enabled source-filter labels.
+ * When empty, all tiles are shown (no filtering).
+ */
+const enabledSources: Set<string> = new Set();
+
+let sourceFilterChangeCallback: ((enabled: Set<string>) => void) | null = null;
+
+export function onSourceFilterChange(cb: (enabled: Set<string>) => void): void {
+  sourceFilterChangeCallback = cb;
+}
+
+export function toggleSourceFilter(label: string): void {
+  if (enabledSources.has(label)) {
+    enabledSources.delete(label);
+  } else {
+    enabledSources.add(label);
+  }
+  sourceFilterChangeCallback?.(enabledSources);
+  refreshMapSources();
+}
+
+/** Check whether a tile's cache passes the current source filter. */
+function passesSourceFilter(cache: string): boolean {
+  if (enabledSources.size === 0) return true;
+  const isNdsLive = cache === "ndsLive";
+  if (isNdsLive && enabledSources.has("NDS.Live")) return true;
+  if (!isNdsLive && enabledSources.has("MapVis")) return true;
+  return false;
+}
+
 // ── Level filter state (map-only) ────────────────────────────────────────────
 
 /** Labels for the level filter buttons: "<=10", "10" .. "14", ">=15" */
@@ -146,8 +182,8 @@ function decodeTile(tile: TrackedTile): { bbox: TileBoundingBox; level: number }
     };
   } else {
     return {
-      bbox: navTileIdToBBox(tile.tileId),
-      level: navTileIdToLevel(tile.tileId),
+      bbox: mapLibreTileIdToBBox(tile.tileId),
+      level: mapLibreTileIdToLevel(tile.tileId),
     };
   }
 }
@@ -187,7 +223,7 @@ function buildFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon> {
   return {
     type: "FeatureCollection",
     features: [...trackedTiles.values()]
-      .filter(tile => passesLevelFilter(decodeTile(tile).level))
+      .filter(tile => passesSourceFilter(tile.cache) && passesLevelFilter(decodeTile(tile).level))
       .map(tileToFeature),
   };
 }
@@ -203,7 +239,7 @@ function buildCrossFeatureCollection(): GeoJSON.FeatureCollection<GeoJSON.MultiL
     if (tile.events.length <= 1) continue;
 
     const { bbox, level } = decodeTile(tile);
-    if (!passesLevelFilter(level)) continue;
+    if (!passesSourceFilter(tile.cache) || !passesLevelFilter(level)) continue;
     const color = EVENT_COLORS[tile.latestEvent] ?? "#6c8cff";
 
     features.push({

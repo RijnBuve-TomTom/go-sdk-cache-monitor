@@ -16,7 +16,7 @@ import type {
   ServerStatus,
   ProtocolVersion,
 } from "../shared/types";
-import { initMap, addTileEventsToMap, replayTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled, toggleLevelFilter, onLevelFilterChange } from "./tile-map";
+import { initMap, addTileEventsToMap, replayTileEventsToMap, clearApiKey, clearTiles, isAutoZoomEnabled, setAutoZoomEnabled, toggleLevelFilter, onLevelFilterChange, toggleSourceFilter, onSourceFilterChange } from "./tile-map";
 import { EventStore } from "./event-store";
 import { TimeCursor } from "./time-cursor";
 import { TimelineSlider } from "./timeline-slider";
@@ -786,6 +786,24 @@ $menuClearKey.addEventListener("click", () => {
 $goLiveBtn.addEventListener("click", () => {
   timeCursor.goLive(Date.now());
   timelineSlider.updatePosition();
+});
+
+// ── Source filter buttons ─────────────────────────────────────────────────────
+
+const $sourceButtons = document.querySelectorAll<HTMLButtonElement>(".source-btn");
+
+for (const btn of $sourceButtons) {
+  btn.addEventListener("click", () => {
+    const label = btn.dataset.source!;
+    toggleSourceFilter(label);
+  });
+}
+
+onSourceFilterChange((enabled) => {
+  for (const btn of $sourceButtons) {
+    const label = btn.dataset.source!;
+    btn.classList.toggle("active", enabled.has(label));
+  }
 });
 
 // ── Level filter buttons ─────────────────────────────────────────────────────

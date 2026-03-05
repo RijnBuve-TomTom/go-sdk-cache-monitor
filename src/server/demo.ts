@@ -24,7 +24,7 @@ import type {
   ProtocolVersion,
 } from "../shared/types.js";
 import { lngLatToPackedTileId } from "../shared/nds.js";
-import { lngLatToNavTileId } from "../shared/navtile.js";
+import { lngLatToMapLibreTileId } from "../shared/mapLibreTile.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
@@ -143,13 +143,13 @@ function generateNdsTileId(): number {
   return lngLatToPackedTileId({ lng, lat }, NDS_TILE_LEVEL);
 }
 
-function generateNavTileId(level: number): number {
+function generateMapLibreTileId(level: number): number {
   const t = vehicleTimeS();
   const aheadS = Math.random() * LOOKAHEAD_POINTS * LOOKAHEAD_STEP_S;
   const pos = vehiclePositionAt(t + aheadS);
   const lng = pos.lng + (Math.random() - 0.5) * 0.02;
   const lat = pos.lat + (Math.random() - 0.5) * 0.02;
-  return lngLatToNavTileId({ lng, lat }, level);
+  return lngLatToMapLibreTileId({ lng, lat }, level);
 }
 
 function pickNonNdsLevel(): number {
@@ -173,7 +173,7 @@ function generateTileBatch(): TileBatchMessage {
       tileId = generateNdsTileId();        // NDS.Live, level 14
     } else {
       const level = pickNonNdsLevel();
-      tileId = generateNavTileId(level);   // NavTile, levels 11-14
+      tileId = generateMapLibreTileId(level);   // MapLibre tile, levels 11-14
     }
 
     const te: TileEvent = { cache, tileId, event };
