@@ -41,7 +41,7 @@ const $menuBtn = document.getElementById("menu-btn")!;
 const $menuDropdown = document.getElementById("menu-dropdown")!;
 const $menuClearKey = document.getElementById("menu-clear-key")!;
 const $menuClearTiles = document.getElementById("menu-clear-tiles")!;
-const $autoZoomCheckbox = document.getElementById("auto-zoom-checkbox") as HTMLInputElement;
+const $autoZoomToggle = document.getElementById("auto-zoom-toggle")!;
 
 const $timelineTrack = document.getElementById("timeline-slider")!.querySelector(".timeline-track")! as HTMLElement;
 const $timelineThumb = document.getElementById("timeline-thumb")!;
@@ -764,9 +764,11 @@ $menuDropdown.addEventListener("click", (e) => {
   e.stopPropagation();
 });
 
-$autoZoomCheckbox.checked = isAutoZoomEnabled();
-$autoZoomCheckbox.addEventListener("change", () => {
-  setAutoZoomEnabled($autoZoomCheckbox.checked);
+$autoZoomToggle.classList.toggle("active", isAutoZoomEnabled());
+$autoZoomToggle.addEventListener("click", () => {
+  const enabled = !isAutoZoomEnabled();
+  setAutoZoomEnabled(enabled);
+  $autoZoomToggle.classList.toggle("active", enabled);
 });
 
 $menuClearTiles.addEventListener("click", () => {
